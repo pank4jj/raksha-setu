@@ -73,6 +73,7 @@ export interface OpsMapProps {
 
 export default function OpsMap(props: OpsMapProps) {
   const { incidents, teams, shelters, assignments } = props;
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   const activeIncidents = incidents.filter(
     (i) => !["RESOLVED", "CANCELLED"].includes(i.status)
@@ -114,7 +115,8 @@ export default function OpsMap(props: OpsMapProps) {
   );
 
   return (
-    <MapContainer center={CENTER} zoom={12} className="h-full w-full" zoomControl={true}>
+    <>
+      <MapContainer center={CENTER} zoom={12} className="h-full w-full" zoomControl={true}>
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -196,6 +198,39 @@ export default function OpsMap(props: OpsMapProps) {
                   {i.location_text}
                 </>
               )}
+              {i.photo_url && (
+                <>
+                  <br />
+                  <button
+                    onClick={() => setLightboxUrl(i.photo_url!)}
+                    className="mt-1.5 block cursor-zoom-in"
+                    title="View full photo"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={i.photo_url}
+                      alt={`Photo for ${i.incident_number}`}
+                      style={{
+                        width: 180,
+                        height: 110,
+                        objectFit: "cover",
+                        borderRadius: 6,
+                      }}
+                    />
+                    <span
+                      style={{
+                        display: "block",
+                        fontSize: 10,
+                        color: "#2563eb",
+                        marginTop: 2,
+                        fontWeight: 600,
+                      }}
+                    >
+                      🔍 View full photo
+                    </span>
+                  </button>
+                </>
+              )}
             </Popup>
           </Marker>
         ))}
@@ -246,6 +281,27 @@ export default function OpsMap(props: OpsMapProps) {
 
       {props.selectedIncidentId && <FlyTo selected={props.selectedIncidentId} incidents={incidents} />}
     </MapContainer>
+
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/85 p-6"
+          onClick={() => setLightboxUrl(null)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={lightboxUrl}
+            alt="Incident evidence"
+            className="max-h-[88vh] max-w-full rounded-lg object-contain shadow-2xl"
+          />
+          <button
+            className="absolute right-4 top-4 rounded-lg bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20"
+            onClick={() => setLightboxUrl(null)}
+          >
+            ✕ Close
+          </button>
+        </div>
+      )}
+    </>
   );
 }
 

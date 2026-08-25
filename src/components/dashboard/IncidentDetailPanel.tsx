@@ -54,6 +54,7 @@ export function IncidentDetailPanel({
   const [showAll, setShowAll] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [manualPick, setManualPick] = useState("");
+  const [lightbox, setLightbox] = useState(false);
 
   const activeAssignment = incident
     ? assignments.find((a) => a.incident_id === incident.id)
@@ -136,6 +137,7 @@ export function IncidentDetailPanel({
     setRecs([]);
     setManualPick("");
     setError(null);
+    setLightbox(false);
   }
 
   useEffect(() => {
@@ -208,6 +210,28 @@ export function IncidentDetailPanel({
         <div> Needs: {incident.required_capabilities.join(", ") || "general"}</div>
         <div> Confidence: {Math.round(incident.confidence_score * 100)}%</div>
       </div>
+
+      {incident.photo_url ? (
+        <button
+          onClick={() => setLightbox(true)}
+          className="relative mb-3 block w-full overflow-hidden rounded-lg border border-[var(--color-border)]"
+          title="Click to enlarge"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={incident.photo_url}
+            alt={`Citizen photo for ${incident.incident_number}`}
+            className="h-36 w-full cursor-zoom-in object-cover"
+          />
+          <span className="absolute bottom-1.5 right-1.5 rounded-md bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white">
+            📷 citizen photo
+          </span>
+        </button>
+      ) : (
+        <div className="mb-3 rounded-lg border border-dashed border-[var(--color-border)] px-3 py-2 text-xs text-muted">
+          📷 No photo attached to this report
+        </div>
+      )}
 
       {!isClosed && suggestedShelters.length > 0 && (
         <div className="mb-3 rounded-lg border border-[var(--color-border)] bg-white p-3 shadow-sm">
@@ -480,6 +504,25 @@ export function IncidentDetailPanel({
               </Button>
             </div>
           </div>
+        </div>
+      )}
+      {lightbox && incident.photo_url && (
+        <div
+          className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/85 p-6"
+          onClick={() => setLightbox(false)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={incident.photo_url}
+            alt={`Citizen photo for ${incident.incident_number}`}
+            className="max-h-[88vh] max-w-full rounded-lg object-contain shadow-2xl"
+          />
+          <button
+            className="absolute right-4 top-4 rounded-lg bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20"
+            onClick={() => setLightbox(false)}
+          >
+            ✕ Close
+          </button>
         </div>
       )}
     </div>
