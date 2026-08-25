@@ -190,6 +190,7 @@ async function executeEvent(
       required_capabilities: event.data.capabilities ?? [],
       source: "APP" as never,
       confidence_score: 0.55,
+      is_simulated: true,
     });
     if (error) throw error;
     return;
@@ -215,23 +216,75 @@ async function executeEvent(
 }
 
 // ---- One-click demo reset -------------------------------------
-export async function resetDemoData(db: Db) {
-  await db
-    .from("assignments")
-    .delete()
-    .neq("id", "00000000-0000-0000-0000-000000000000");
-  await db
-    .from("incidents")
-    .delete()
-    .neq("id", "00000000-0000-0000-0000-000000000000");
+// Surgical: removes only simulation artifacts (flagged incidents
+// + their assignments) and restores scenario-touched resources.
+// Seed incidents and real citizen reports are preserved.
 
-  await db
-    .from("resource_teams")
-    .update({ status: "AVAILABLE" })
-    .eq("status", "UNAVAILABLE");
+// Seed status per team from supabase/seed.sql - reset restores
+// exactly these, so e.g. RT-006 stays UNAVAILABLE as seeded.
+const SEED_TEAM_STATUSES: Record<string, string> = {
+  "RT-001": "AVAILABLE",
+  "RT-002": "AVAILABLE",
+  "RT-003": "AVAILABLE",
+  "RT-004": "AVAILABLE",
+  "RT-005": "AVAILABLE",
+  "RT-006": "UNAVAILABLE",
+};
+
+export async function resetDemoData(db: Db) {
+  // Assignments tied to simulated incidents first (FK safety)
+  const { data: simIncidents, error: fetchErr } = await db
+    .from("incidents")
+    .select("id")
+    .eq("is_simulated", true);
+  if (fetchErr) throw fetchErr;
+
+  const simIds = (simIncidents ?? []).map((r) => r.id);
+  if (simIds.length > 0) {
+    const { error: asgErr } = await db
+      .from("assignments")
+      .delete()
+      .in("incident_id", simIds);
+    if (asgErr) throw asgErr;
+
+    const { error: incErr } = await db
+      .from("incidents")
+      .delete()
+      .in("id", simIds);
+    if (incErr) throw incErr;
+  }
+
+  // Restore every scenario-touched team to its seed status
+  const touchedTeams = new Set<string>();
+  for (const scenario of SCENARIOS) {
+    for (const event of scenario.events) {
+      if (event.type === "UPDATE_RESOURCE" && event.data.teamCode) {
+        touchedTeams.add(event.data.teamCode);
+      }
+    }
+  }
+  for (const teamCode of touchedTeams) {
+    const { error } = await db
+      .from("resource_teams")
+      .update({
+        status: (SEED_TEAM_STATUSES[teamCode] ?? "AVAILABLE") as never,
+        last_status_update: new Date().toISOString(),
+      })
+      .eq("team_code", teamCode);
+    if (error) throw error;
+  }
 
   // Restore seed-like occupancies
-  await db.from("shelters").update({ current_occupancy: 45 }).eq("name", "Govt High School - Sector 2");
-  await db.from("shelters").update({ current_occupancy: 130 }).eq("name", "Community Hall - Chhend Colony");
-  await db.from("shelters").update({ current_occupancy: 90 }).eq("name", "Saraswati Vidya Mandir - Koel Nagar");
+  const seedOccupancy: Array<[string, number]> = [
+    ["Govt High School - Sector 2", 45],
+    ["Community Hall - Chhend Colony", 130],
+    ["Saraswati Vidya Mandir - Koel Nagar", 90],
+  ];
+  for (const [name, occupancy] of seedOccupancy) {
+    const { error } = await db
+      .from("shelters")
+      .update({ current_occupancy: occupancy })
+      .eq("name", name);
+    if (error) throw error;
+  }
 }

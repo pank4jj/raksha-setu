@@ -101,6 +101,7 @@ export type Incident = {
   confidence_score: number;
   verification_status: VerificationStatus;
   source: ReportSource;
+  is_simulated: boolean;
   photo_url: string | null;
   ai_classification: unknown;
   reported_at: string;
@@ -125,6 +126,7 @@ export type IncidentInsert = {
   confidence_score?: number;
   verification_status?: VerificationStatus;
   source?: ReportSource;
+  is_simulated?: boolean;
   photo_url?: string | null;
   resolved_at?: string | null;
   ai_classification?: unknown;

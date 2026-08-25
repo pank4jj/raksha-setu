@@ -44,7 +44,14 @@ export default function SimulationPage() {
       setLog((l) => ["⏹ Stopped", ...l].slice(0, 10));
     }
     if (action === "reset") {
-      setLog((l) => ["♻ Reset demo data", ...l].slice(0, 10));
+      setLog((l) =>
+        [
+          res.ok
+            ? "♻ Reset demo data"
+            : `⚠ Reset failed: ${json.error ?? "unknown error"}`,
+          ...l,
+        ].slice(0, 10)
+      );
     }
     await refresh();
     setBusy(false);

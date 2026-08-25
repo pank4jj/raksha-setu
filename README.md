@@ -115,5 +115,5 @@ src/
 │   ├── report/              # citizen 3-step PWA wizard (+ anonymous reports)
 │   ├── team/                # field team mission view
 │   └── shelter-manage/      # shelter occupancy view
-supabase/migrations/         # 0001 schema … 0008 policies (full list in setup)
+supabase/migrations/         # 0001 schema · 0002 storage · 0003 clustering · … · 0009 delete policies
 supabase/seed.sql            # Rourkela flood demo dataset (idempotent)

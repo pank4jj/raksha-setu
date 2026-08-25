@@ -61,7 +61,15 @@ export async function POST(request: NextRequest) {
   if (body.action === "reset") {
     stopSimulation();
     const supabase = await createServerClient();
-    await resetDemoData(supabase);
+    try {
+      await resetDemoData(supabase);
+    } catch (err) {
+      console.error("[simulation] reset failed:", err);
+      return jsonError(
+        err instanceof Error ? err.message : "Reset failed",
+        500
+      );
+    }
     return NextResponse.json({ reset: true });
   }
 
