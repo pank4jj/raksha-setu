@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import "leaflet.heat";
 import type {
   Alert,
   Assignment,
@@ -122,20 +123,8 @@ export default function OpsMap(props: OpsMapProps) {
       {/* Live precipitation radar (RainViewer, free) */}
       {props.layers.radar && <RadarLayer />}
 
-      {/* Heat approximation: translucent circles weighted by severity */}
-      {props.showHeatmap &&
-        heatPoints.map(([lat, lng, w], idx) => (
-          <CircleMarker
-            key={`heat-${idx}`}
-            center={[lat, lng]}
-            radius={30 * w + 15}
-            pathOptions={{
-              color: "transparent",
-              fillColor: w >= 0.75 ? "#dc2626": "#f59e0b",
-              fillOpacity: 0.18 * w + 0.05,
-            }}
-          />
-        ))}
+      {/* Severity-weighted density heatmap (leaflet.heat) */}
+      {props.showHeatmap && <HeatLayer points={heatPoints} />}
 
       {/* Weather warning zones */}
       {props.alerts
@@ -274,6 +263,30 @@ function FlyTo({
 }
 
 // ------------------------------------------------------------
+// True density heatmap via leaflet.heat - severity-weighted points
+// render as a smooth gradient blob instead of discrete circles.
+function HeatLayer({ points }: { points: [number, number, number][] }) {
+  const map = useMap();
+  useEffect(() => {
+    const layer = L.heatLayer(points, {
+      radius: 40,
+      blur: 25,
+      maxZoom: 13,
+      minOpacity: 0.25,
+      gradient: {
+        0.2: "#fbbf24",
+        0.5: "#f97316",
+        0.8: "#dc2626",
+        1.0: "#7f1d1d",
+      },
+    }).addTo(map);
+    return () => {
+      map.removeLayer(layer);
+    };
+  }, [map, points]);
+  return null;
+}
+
 // Live rain radar: pulls RainViewer's latest past-radar frame and
 // renders it as a semi-transparent tile layer. Free, no API key.
 // NOTE: RainViewer serves tiles only up to zoom level 7 and its

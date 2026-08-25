@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
@@ -9,6 +9,7 @@ import type {
   Assignment,
   Incident,
   ResourceTeam,
+  Shelter,
 } from "@/types/database";
 
 interface Recommendation {
@@ -35,12 +36,14 @@ const SEV_COLORS: Record<string, string> = {
 export function IncidentDetailPanel({
   incident,
   teams,
+  shelters,
   assignments,
   onClose,
   onAssigned,
 }: {
   incident: Incident | null;
   teams: ResourceTeam[];
+  shelters: Shelter[];
   assignments: Assignment[];
   onClose: () => void;
   onAssigned: () => void;
@@ -55,6 +58,32 @@ export function IncidentDetailPanel({
   const activeAssignment = incident
     ? assignments.find((a) => a.incident_id === incident.id)
 : undefined;
+
+  // Nearest shelters with free capacity - shelters that can absorb
+  // everyone affected rank before partial-capacity ones, then distance.
+  const suggestedShelters = useMemo(() => {
+    if (!incident) return [];
+    return shelters
+      .map((s) => ({
+        shelter: s,
+        free: s.total_capacity - s.current_occupancy,
+        distanceKm: haversineKm(
+          incident.latitude,
+          incident.longitude,
+          s.latitude,
+          s.longitude
+        ),
+      }))
+      .filter((x) => x.free > 0)
+      .sort((a, b) => {
+        const need = incident.people_affected;
+        const aFits = a.free >= need ? 0 : 1;
+        const bFits = b.free >= need ? 0 : 1;
+        if (aFits !== bFits) return aFits - bFits;
+        return a.distanceKm - b.distanceKm;
+      })
+      .slice(0, 3);
+  }, [incident, shelters]);
 
   // Closed incidents are read-only - no dispatch UI
   const isClosed =
@@ -179,6 +208,39 @@ export function IncidentDetailPanel({
         <div> Needs: {incident.required_capabilities.join(", ") || "general"}</div>
         <div> Confidence: {Math.round(incident.confidence_score * 100)}%</div>
       </div>
+
+      {!isClosed && suggestedShelters.length > 0 && (
+        <div className="mb-3 rounded-lg border border-[var(--color-border)] bg-white p-3 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted">
+            🏥 Suggested Shelters
+          </div>
+          <div className="mt-2 space-y-1.5">
+            {suggestedShelters.map(({ shelter, free, distanceKm }) => (
+              <a
+                key={shelter.id}
+                href={`https://www.google.com/maps/dir/?api=1&destination=${shelter.latitude},${shelter.longitude}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center justify-between gap-2 rounded-md bg-gray-50 px-2 py-1.5 text-xs hover:bg-gray-100"
+              >
+                <span className="truncate font-medium">{shelter.name}</span>
+                <span
+                  className={`ml-auto shrink-0 font-medium ${
+                    free >= incident.people_affected ? "text-green-700" : "text-muted"
+                  }`}
+                >
+                  {free >= incident.people_affected
+                    ? `✓ fits all · ${distanceKm.toFixed(1)} km`
+                    : `${free} free · ${distanceKm.toFixed(1)} km`}
+                </span>
+              </a>
+            ))}
+          </div>
+          <p className="mt-1.5 text-[11px] text-muted">
+            Ranked by ability to absorb {incident.people_affected} people, then distance. Click for directions.
+          </p>
+        </div>
+      )}
 
       {isClosed && (
         <div className="mb-3 rounded-lg border border-green-200 bg-green-50 p-3">

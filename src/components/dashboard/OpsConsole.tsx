@@ -305,6 +305,7 @@ export function OpsConsole() {
             <IncidentDetailPanel
               incident={selected}
               teams={teams}
+              shelters={shelters}
               assignments={assignments}
               onClose={() => setSelectedId(null)}
               onAssigned={() => {

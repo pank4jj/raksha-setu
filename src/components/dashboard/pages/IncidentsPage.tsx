@@ -7,7 +7,7 @@ import { IncidentDetailPanel } from "../IncidentDetailPanel";
 
 // Full-page incidents management view (list + detail side by side)
 export function IncidentsPage() {
-  const { incidents, teams, assignments, connected, refresh } = useLiveData();
+  const { incidents, teams, shelters, assignments, connected, refresh } = useLiveData();
   const [filter, setFilter] = useState<IncidentFilter>("ACTIVE");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -51,6 +51,7 @@ export function IncidentsPage() {
             <IncidentDetailPanel
               incident={selected}
               teams={teams}
+              shelters={shelters}
               assignments={assignments}
               onClose={() => setSelectedId(null)}
               onAssigned={refresh}
