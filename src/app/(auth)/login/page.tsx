@@ -50,7 +50,7 @@ export default function LoginPage() {
       <header className="border-b border-[var(--color-border)] bg-white/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
           <Link href="/" className="flex items-center gap-2">
-            <Logo size={36} />
+            <Logo size={48} />
             <span className="text-sm font-bold tracking-tight">RakshaSetu</span>
           </Link>
           <Link

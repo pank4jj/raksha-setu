@@ -78,8 +78,8 @@ export default async function Home({
       <header className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-white/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
           <Link href="/" className="flex items-center gap-2">
-            <Logo size={36} />
-            <span className="text-sm font-bold tracking-tight">RakshaSetu</span>
+            <Logo size={48} />
+            <span className="text-base font-bold tracking-tight">RakshaSetu</span>
           </Link>
           {signedIn ? (
             <Link
@@ -217,8 +217,8 @@ export default async function Home({
         <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:grid-cols-3 sm:px-6">
           <div>
             <div className="flex items-center gap-2">
-              <Logo size={32} />
-              <b className="text-sm">RakshaSetu</b>
+              <Logo size={40} />
+              <b className="text-base">RakshaSetu</b>
             </div>
             <p className="mt-2 text-xs leading-relaxed text-muted">
               Real-Time Disaster Response Coordination &amp; Resource

@@ -72,7 +72,7 @@ export default function CitizenDashboard() {
       <header className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-white/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-2.5">
-            <Logo size={40} />
+            <Logo size={48} />
             <div className="min-w-0">
               <div className="truncate text-sm font-bold leading-tight">
                 RakshaSetu

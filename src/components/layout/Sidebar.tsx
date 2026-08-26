@@ -54,7 +54,7 @@ export function Sidebar({
     <aside className="flex w-16 shrink-0 flex-col border-r border-[var(--color-border)] bg-white transition-all lg:w-60">
       {/* Brand */}
       <div className="flex h-16 shrink-0 items-center gap-2.5 border-b border-[var(--color-border)] px-3 lg:px-5">
-        <Logo size={32} />
+        <Logo size={40} />
         <div className="hidden min-w-0 lg:block">
           <div className="truncate text-sm font-bold leading-tight">
             RakshaSetu
