@@ -87,6 +87,8 @@ function bearing(lat1: number, lng1: number, lat2: number, lng2: number) {
   return dirs[Math.round((((Math.atan2(y, x) * 180) / Math.PI + 360) % 360) / 45) % 8];
 }
 
+import { useTranslation } from "@/context/LanguageContext";
+
 export function AreaStatus({
   incidents,
   shelters,
@@ -94,6 +96,7 @@ export function AreaStatus({
   incidents?: Incident[];
   shelters?: Shelter[];
 }) {
+  const { dict } = useTranslation();
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [placeName, setPlaceName] = useState<string | null>(null);
   const [weather, setWeather] = useState<Weather | null>(null);
@@ -210,7 +213,7 @@ export function AreaStatus({
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <h2 className="text-sm font-bold uppercase tracking-wider text-muted">
-            {placeName ?? "Your Area Status"}
+            {placeName ?? dict.citizenPortal.areaStatusTitle}
           </h2>
           <p className="mt-0.5 truncate text-xs text-muted">
             {coords
@@ -255,24 +258,29 @@ export function AreaStatus({
       {incidents && (
         <div className="mt-4 border-t border-[var(--color-border)] pt-3">
           <div className="text-xs font-semibold uppercase tracking-wide text-muted">
-            Active incidents within 5 km
+            {dict.citizenPortal.incidentsWithin5km}
           </div>
           {activeNear.length === 0 ? (
-            <p className="mt-1 text-xs text-muted">None reported nearby.</p>
+            <p className="mt-1 text-xs text-muted">{dict.citizenPortal.noneReportedNearby}</p>
           ) : (
             <ul className="mt-1.5 space-y-1">
-              {activeNear.slice(0, 4).map((i) => (
-                <li key={i.id} className="flex items-center justify-between text-xs">
-                  <span className="truncate pr-2">
-                    <b>{i.type.replace(/_/g, " ")}</b> · {i.people_affected} people
-                  </span>
-                  <span className="shrink-0 font-medium tabular-nums text-muted">
-                    {coords
-                      ? `${haversineKm(coords.lat, coords.lng, i.latitude, i.longitude).toFixed(1)} km ${bearing(coords.lat, coords.lng, i.latitude, i.longitude)}`
-                      : ""}
-                  </span>
-                </li>
-              ))}
+              {activeNear.slice(0, 4).map((i) => {
+                const catLabel =
+                  (dict.incidents.categories as Record<string, string>)[i.type] ??
+                  i.type.replace(/_/g, " ");
+                return (
+                  <li key={i.id} className="flex items-center justify-between text-xs">
+                    <span className="truncate pr-2">
+                      <b>{catLabel}</b> · {i.people_affected} {dict.incidents.casualties}
+                    </span>
+                    <span className="shrink-0 font-medium tabular-nums text-muted">
+                      {coords
+                        ? `${haversineKm(coords.lat, coords.lng, i.latitude, i.longitude).toFixed(1)} km ${bearing(coords.lat, coords.lng, i.latitude, i.longitude)}`
+                        : ""}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -281,7 +289,7 @@ export function AreaStatus({
       {alertsNearby.length > 0 && (
         <div className="mt-3 border-t border-[var(--color-border)] pt-3">
           <div className="text-xs font-semibold uppercase tracking-wide text-muted">
-            Official warnings
+            {dict.citizenPortal.activeWarnings}
           </div>
           <ul className="mt-1.5 space-y-1">
             {alertsNearby.slice(0, 2).map((a) => (
@@ -296,10 +304,10 @@ export function AreaStatus({
       {shelters && (
         <div className="mt-3 border-t border-[var(--color-border)] pt-3">
           <div className="text-xs font-semibold uppercase tracking-wide text-muted">
-            Nearest relief shelters
+            {dict.citizenPortal.nearestReliefShelters}
           </div>
           {sheltersNear.length === 0 ? (
-            <p className="mt-1 text-xs text-muted">No shelter data available.</p>
+            <p className="mt-1 text-xs text-muted">{dict.citizenPortal.noShelterInfo}</p>
           ) : (
             <ul className="mt-1.5 space-y-1">
               {sheltersNear.map(({ s, km }) => {
@@ -313,7 +321,7 @@ export function AreaStatus({
                       {s.name}
                       <span className="ml-1.5 text-muted">
                         ({s.current_occupancy}/{s.total_capacity})
-                        {pct >= 90 ? " · almost full" : ""}
+                        {pct >= 90 ? ` · ${dict.citizenPortal.almostFull}` : ""}
                       </span>
                     </span>
                     <span className="shrink-0 font-medium tabular-nums text-muted">

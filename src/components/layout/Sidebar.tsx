@@ -5,32 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useLiveData } from "@/hooks/useLiveData";
 import { Logo } from "@/components/ui/Logo";
-
-const NAV_GROUPS: {
-  title: string;
-  items: { href: string; label: string; glyph: string }[];
-}[] = [
-  {
-    title: "Operations",
-    items: [
-      { href: "/dashboard", label: "Overview", glyph: "O" },
-      { href: "/dashboard/map", label: "Live Map", glyph: "M" },
-      { href: "/dashboard/incidents", label: "Incidents", glyph: "I" },
-      { href: "/dashboard/assignments", label: "Assignments", glyph: "A" },
-    ],
-  },
-  {
-    title: "Resources",
-    items: [
-      { href: "/dashboard/resources", label: "Teams", glyph: "T" },
-      { href: "/dashboard/shelters", label: "Shelters", glyph: "S" },
-    ],
-  },
-  {
-    title: "Tools",
-    items: [{ href: "/dashboard/simulation", label: "Simulation", glyph: "Si" }],
-  },
-];
+import { useTranslation } from "@/context/LanguageContext";
+import { LanguageSelector } from "@/components/ui/LanguageSelector";
 
 export function Sidebar({
   userName,
@@ -42,6 +18,30 @@ export function Sidebar({
   const pathname = usePathname();
   const router = useRouter();
   const { connected } = useLiveData();
+  const { dict } = useTranslation();
+
+  const navGroups = [
+    {
+      title: dict.nav.operations,
+      items: [
+        { href: "/dashboard", label: dict.nav.overview, glyph: "O" },
+        { href: "/dashboard/map", label: dict.nav.liveMap, glyph: "M" },
+        { href: "/dashboard/incidents", label: dict.nav.incidents, glyph: "I" },
+        { href: "/dashboard/assignments", label: dict.nav.assignments, glyph: "A" },
+      ],
+    },
+    {
+      title: dict.nav.resources,
+      items: [
+        { href: "/dashboard/resources", label: dict.nav.teams, glyph: "T" },
+        { href: "/dashboard/shelters", label: dict.nav.shelters, glyph: "S" },
+      ],
+    },
+    {
+      title: dict.nav.tools,
+      items: [{ href: "/dashboard/simulation", label: dict.nav.simulation, glyph: "Si" }],
+    },
+  ];
 
   async function signOut() {
     const supabase = createClient();
@@ -57,15 +57,15 @@ export function Sidebar({
         <Logo size={40} />
         <div className="hidden min-w-0 lg:block">
           <div className="truncate text-sm font-bold leading-tight">
-            RakshaSetu
+            {dict.common.appName}
           </div>
-          <div className="text-xs text-muted">Control Room</div>
+          <div className="text-xs text-muted">{dict.common.controlRoom}</div>
         </div>
       </div>
 
       {/* Nav */}
       <nav className="flex-1 space-y-5 overflow-y-auto p-2 lg:p-3">
-        {NAV_GROUPS.map((group) => (
+        {navGroups.map((group) => (
           <div key={group.title}>
             <div className="mb-1 hidden px-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 lg:block">
               {group.title}
@@ -110,8 +110,19 @@ export function Sidebar({
         ))}
       </nav>
 
-      {/* Footer / user card */}
+      {/* Footer / language switcher + user card */}
       <div className="shrink-0 border-t border-[var(--color-border)] p-2 lg:p-4">
+        {/* Language selector for desktop & mobile */}
+        <div className="mb-3 hidden lg:block">
+          <div className="mb-1 px-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+            {dict.common.language}
+          </div>
+          <LanguageSelector variant="pill" className="w-full justify-between" />
+        </div>
+        <div className="mb-2 flex justify-center lg:hidden">
+          <LanguageSelector variant="compact" />
+        </div>
+
         <div className="mb-2 flex items-center gap-1.5 rounded-lg bg-gray-50 px-2 py-1.5 text-[11px] text-muted lg:hidden">
           <span
             className={`inline-block h-1.5 w-1.5 rounded-full ${
@@ -125,7 +136,7 @@ export function Sidebar({
               connected ? "bg-green-500" : "bg-amber-400"
             }`}
           />
-          {connected ? "Realtime connected" : "Reconnecting…"}
+          {connected ? dict.common.realtimeConnected : dict.common.reconnecting}
         </div>
 
         <div className="rounded-xl bg-gray-50 p-2 lg:p-3">
@@ -142,10 +153,10 @@ export function Sidebar({
           </div>
           <button
             onClick={signOut}
-            title="Sign out"
+            title={dict.common.signOut}
             className="mt-2 w-full rounded-lg border border-[var(--color-border)] bg-white py-1.5 text-xs font-medium text-muted transition-colors hover:bg-red-50 hover:text-red-600"
           >
-            Sign out
+            {dict.common.signOut}
           </button>
         </div>
       </div>

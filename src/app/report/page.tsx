@@ -3,21 +3,24 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { useTranslation } from "@/context/LanguageContext";
+import { LanguageSelector } from "@/components/ui/LanguageSelector";
 
-const CATEGORIES = [
-  { value: "FLOOD", label: "Flood", icon: "" },
-  { value: "FIRE", label: "Fire", icon: "" },
-  { value: "LANDSLIDE", label: "Landslide", icon: "" },
-  { value: "STRUCTURAL_COLLAPSE", label: "Collapse", icon: "" },
-  { value: "MEDICAL_EMERGENCY", label: "Medical", icon: "" },
-  { value: "EARTHQUAKE", label: "Earthquake", icon: "" },
-  { value: "CYCLONE", label: "Cyclone", icon: "" },
-  { value: "OTHER", label: "Other", icon: "" },
+const CATEGORIES_RAW = [
+  { value: "FLOOD", icon: "🌊" },
+  { value: "FIRE", icon: "🔥" },
+  { value: "LANDSLIDE", icon: "⛰️" },
+  { value: "STRUCTURAL_COLLAPSE", icon: "🏚️" },
+  { value: "MEDICAL_EMERGENCY", icon: "🚑" },
+  { value: "EARTHQUAKE", icon: "🫨" },
+  { value: "CYCLONE", icon: "🌀" },
+  { value: "OTHER", icon: "⚠️" },
 ] as const;
 
 type Step = 1 | 2 | 3;
 
 export default function ReportPage() {
+  const { dict } = useTranslation();
   const [step, setStep] = useState<Step>(1);
   const [category, setCategory] = useState<string>("");
   const [description, setDescription] = useState("");
@@ -83,8 +86,8 @@ export default function ReportPage() {
         const ext = photo.name.split(".").pop() ?? "jpg";
         const path = `${crypto.randomUUID()}.${ext}`;
         const { error: upErr } = await supabase.storage
-.from("incident-photos")
-.upload(path, photo);
+          .from("incident-photos")
+          .upload(path, photo);
         if (upErr) throw upErr;
         const { data } = supabase.storage.from("incident-photos").getPublicUrl(path);
         photoUrl = data.publicUrl;
@@ -109,7 +112,7 @@ export default function ReportPage() {
 
       setIncidentNumber(json.incident.incident_number);
     } catch (e) {
-      setError(e instanceof Error ? e.message: "Could not submit report");
+      setError(e instanceof Error ? e.message : "Could not submit report");
     } finally {
       setSubmitting(false);
     }
@@ -122,41 +125,41 @@ export default function ReportPage() {
         <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-green-100 text-4xl">
           ✓
         </div>
-        <h1 className="text-2xl font-bold">Help is on the way</h1>
+        <h1 className="text-2xl font-bold">{dict.citizenReport.successTitle}</h1>
         <p className="mt-2 text-muted">
-          Your report has been sent to the response team.
+          {dict.citizenReport.successDesc}
         </p>
         <div className="mt-6 w-full rounded-xl border border-[var(--color-border)] bg-white p-5 shadow-sm">
           <div className="text-xs uppercase tracking-wide text-muted">
-            Your report number
+            {dict.citizenReport.reportNumber}
           </div>
           <div className="mt-1 font-mono text-2xl font-bold">{incidentNumber}</div>
         </div>
         <p className="mt-4 text-sm text-muted">
           {signedIn
-            ? "Track its status anytime from your dashboard."
-: "Save this number — you reported as a guest, so show it to any responder to check progress."}
+            ? dict.citizenReport.trackSigned
+            : dict.citizenReport.trackGuest}
         </p>
         {signedIn ? (
           <Link
             href="/citizen"
             className="mt-8 inline-flex h-12 w-full max-w-xs items-center justify-center rounded-xl bg-[var(--color-primary)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary-dark)] active:scale-[0.99]"
           >
-            Go to my dashboard
+            {dict.citizenReport.goToDashboard}
           </Link>
-        ): (
+        ) : (
           <>
             <Link
               href="/register"
               className="mt-8 inline-flex h-12 w-full max-w-xs items-center justify-center rounded-xl bg-[var(--color-primary)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary-dark)] active:scale-[0.99]"
             >
-              Create an account to track live
+              {dict.citizenReport.createAccount}
             </Link>
             <Link
               href="/"
               className="mt-3 inline-flex h-11 w-full max-w-xs items-center justify-center rounded-xl border border-[var(--color-border)] bg-white text-sm font-medium hover:bg-gray-50"
             >
-              Back to home
+              {dict.citizenReport.backHome}
             </Link>
           </>
         )}
@@ -167,11 +170,14 @@ export default function ReportPage() {
   // ---------- Wizard ----------
   return (
     <main className="mx-auto min-h-screen max-w-md px-4 pb-12 pt-4 sm:px-6 sm:pt-10">
-      <header className="sticky top-0 z-20 -mx-4 mb-6 flex items-center gap-3 border-b border-transparent bg-gray-50/85 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
-        <Link href="/" aria-label="Back" className="rounded-lg px-2 py-1 text-xl text-muted transition-colors hover:bg-gray-200/70 hover:text-foreground">
-          ←
-        </Link>
-        <h1 className="text-lg font-bold">Report an Emergency</h1>
+      <header className="sticky top-0 z-20 -mx-4 mb-6 flex items-center justify-between gap-3 border-b border-transparent bg-gray-50/85 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
+        <div className="flex items-center gap-2">
+          <Link href="/" aria-label="Back" className="rounded-lg px-2 py-1 text-xl text-muted transition-colors hover:bg-gray-200/70 hover:text-foreground">
+            ←
+          </Link>
+          <h1 className="text-lg font-bold">{dict.citizenReport.title}</h1>
+        </div>
+        <LanguageSelector variant="compact" />
       </header>
 
       {/* Progress dots */}
@@ -180,7 +186,7 @@ export default function ReportPage() {
           <div
             key={s}
             className={`h-1.5 flex-1 rounded-full ${
-              s <= step ? "bg-[var(--color-primary)]": "bg-gray-200"
+              s <= step ? "bg-[var(--color-primary)]" : "bg-gray-200"
             }`}
           />
         ))}
@@ -189,26 +195,30 @@ export default function ReportPage() {
       {/* Step 1: Category */}
       {step === 1 && (
         <section>
-          <h2 className="mb-1 text-xl font-bold">What is happening?</h2>
-          <p className="mb-4 text-sm text-muted">Pick the closest match</p>
+          <h2 className="mb-1 text-xl font-bold">{dict.citizenReport.whatIsHappening}</h2>
+          <p className="mb-4 text-sm text-muted">{dict.citizenReport.pickClosest}</p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {CATEGORIES.map((c) => (
-              <button
-                key={c.value}
-                onClick={() => {
-                  setCategory(c.value);
-                  setStep(2);
-                }}
-                className={`flex aspect-square flex-col items-center justify-center gap-2 rounded-2xl border-2 bg-white p-3 shadow-sm transition-all hover:border-gray-300 active:scale-[0.97] ${
-                  category === c.value
-                    ? "border-[var(--color-primary)]"
-: "border-transparent"
-                }`}
-              >
-                <span className="text-3xl">{c.icon}</span>
-                <span className="text-xs font-medium">{c.label}</span>
-              </button>
-            ))}
+            {CATEGORIES_RAW.map((c) => {
+              const label =
+                (dict.citizenReport.categories as Record<string, string>)[c.value] ?? c.value;
+              return (
+                <button
+                  key={c.value}
+                  onClick={() => {
+                    setCategory(c.value);
+                    setStep(2);
+                  }}
+                  className={`flex aspect-square flex-col items-center justify-center gap-2 rounded-2xl border-2 bg-white p-3 shadow-sm transition-all hover:border-gray-300 active:scale-[0.97] ${
+                    category === c.value
+                      ? "border-[var(--color-primary)]"
+                      : "border-transparent"
+                  }`}
+                >
+                  <span className="text-3xl">{c.icon}</span>
+                  <span className="text-xs font-medium text-center">{label}</span>
+                </button>
+              );
+            })}
           </div>
         </section>
       )}
@@ -216,18 +226,18 @@ export default function ReportPage() {
       {/* Step 2: Details */}
       {step === 2 && (
         <section>
-          <h2 className="mb-4 text-xl font-bold">Tell us more</h2>
+          <h2 className="mb-4 text-xl font-bold">{dict.citizenReport.tellUsMore}</h2>
 
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
-            placeholder="Describe the situation - what do you see? How many people need help?"
+            placeholder={dict.citizenReport.describePlaceholder}
             className="w-full resize-none rounded-xl border border-[var(--color-border)] bg-white p-4 text-base focus:outline-2 focus:outline-[var(--color-primary)]"
           />
 
           <div className="mt-4 flex items-center justify-between rounded-xl border border-[var(--color-border)] bg-white p-4 shadow-sm">
-            <span className="text-sm font-medium">People who need help</span>
+            <span className="text-sm font-medium">{dict.citizenReport.peopleNeedingHelp}</span>
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setPeople((p) => Math.max(1, p - 1))}
@@ -255,11 +265,11 @@ export default function ReportPage() {
             />
             {photo ? (
               <span className="text-sm font-medium text-green-600">
-                 Photo attached ({photo.name.slice(0, 24)})
+                📷 {dict.citizenReport.photoAttached} ({photo.name.slice(0, 24)})
               </span>
-            ): (
+            ) : (
               <span className="text-sm text-muted">
-                 Add a photo <span className="text-xs">(optional)</span>
+                📷 {dict.citizenReport.addPhoto} <span className="text-xs">({dict.citizenReport.optional})</span>
               </span>
             )}
           </label>
@@ -269,14 +279,14 @@ export default function ReportPage() {
               onClick={() => setStep(1)}
               className="inline-flex h-12 flex-1 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white text-sm font-medium transition-colors hover:bg-gray-50 active:scale-[0.99]"
             >
-              Back
+              {dict.citizenReport.back}
             </button>
             <button
               onClick={() => description.trim().length >= 5 && setStep(3)}
               disabled={description.trim().length < 5}
               className="inline-flex h-12 flex-[2] items-center justify-center rounded-xl bg-[var(--color-accent)] text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.99] disabled:opacity-40"
             >
-              Next
+              {dict.citizenReport.next}
             </button>
           </div>
         </section>
@@ -285,9 +295,9 @@ export default function ReportPage() {
       {/* Step 3: Location */}
       {step === 3 && (
         <section>
-          <h2 className="mb-1 text-xl font-bold">Where are you?</h2>
+          <h2 className="mb-1 text-xl font-bold">{dict.citizenReport.whereAreYou}</h2>
           <p className="mb-4 text-sm text-muted">
-            We use GPS only while you report
+            {dict.citizenReport.gpsPrivacyNotice}
           </p>
 
           <button
@@ -295,26 +305,26 @@ export default function ReportPage() {
             className={`w-full rounded-xl border-2 p-5 text-left transition-colors ${
               coords
                 ? "border-green-400 bg-green-50"
-: "border-dashed border-[var(--color-accent)] bg-blue-50/50"
+                : "border-dashed border-[var(--color-accent)] bg-blue-50/50"
             }`}
           >
             {locating ? (
-              <span className="text-sm font-medium"> Detecting location...</span>
-            ): coords ? (
+              <span className="text-sm font-medium">📍 {dict.citizenReport.detectingLocation}</span>
+            ) : coords ? (
               <>
                 <span className="block text-sm font-semibold text-green-700">
-                   Location detected
+                  ✓ {dict.citizenReport.locationDetected}
                 </span>
                 <span className="text-xs text-muted">
                   {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}
                 </span>
               </>
-            ): (
+            ) : (
               <>
                 <span className="block text-sm font-semibold text-[var(--color-accent)]">
-                   Detect my location
+                  📍 {dict.citizenReport.detectLocation}
                 </span>
-                <span className="text-xs text-muted">Tap to allow GPS access</span>
+                <span className="text-xs text-muted">{dict.citizenReport.tapGps}</span>
               </>
             )}
           </button>
@@ -322,7 +332,7 @@ export default function ReportPage() {
           <input
             value={landmark}
             onChange={(e) => setLandmark(e.target.value)}
-            placeholder="Nearby landmark (e.g. near ward 12 bridge)"
+            placeholder={dict.citizenReport.landmarkPlaceholder}
             className="mt-4 w-full rounded-xl border border-[var(--color-border)] bg-white p-4 text-base focus:outline-2 focus:outline-[var(--color-primary)]"
           />
 
@@ -337,14 +347,14 @@ export default function ReportPage() {
               onClick={() => setStep(2)}
               className="inline-flex h-12 flex-1 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white text-sm font-medium transition-colors hover:bg-gray-50 active:scale-[0.99]"
             >
-              Back
+              {dict.citizenReport.back}
             </button>
             <button
               onClick={handleSubmit}
               disabled={submitting || !coords}
               className="inline-flex h-12 flex-[2] items-center justify-center rounded-xl bg-[var(--color-primary)] text-base font-bold text-white transition-all hover:bg-[var(--color-primary-dark)] active:scale-[0.99] disabled:opacity-40"
             >
-              {submitting ? "Sending...": " SEND REPORT"}
+              {submitting ? dict.citizenReport.sending : dict.citizenReport.sendReport}
             </button>
           </div>
         </section>

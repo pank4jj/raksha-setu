@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { useLiveData, isActiveAssignment } from "@/hooks/useLiveData";
+import { useTranslation } from "@/context/LanguageContext";
 
 const FLOW: Record<string, { next: string; label: string } | undefined> = {
   PENDING: { next: "ACKNOWLEDGED", label: "Acknowledge" },
@@ -14,10 +15,10 @@ const FLOW: Record<string, { next: string; label: string } | undefined> = {
 
 export function AssignmentsPage() {
   const { assignments, teams, incidents, refresh } = useLiveData();
+  const { dict } = useTranslation();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showDone, setShowDone] = useState(false);
-
 
   async function setStatus(id: string, status: string) {
     setBusy(id);
@@ -32,18 +33,17 @@ export function AssignmentsPage() {
       if (!res.ok) throw new Error(json.error);
       refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message: "Update failed");
+      setError(e instanceof Error ? e.message : "Update failed");
     }
     setBusy(null);
   }
 
   const active = assignments.filter(isActiveAssignment);
   const done = assignments.filter((a) => !isActiveAssignment(a));
-  void done;
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="mb-4 text-2xl font-bold">Assignments</h1>
+      <h1 className="mb-4 text-2xl font-bold">{dict.nav.assignments}</h1>
 
       {error && (
         <p className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-[var(--color-primary)]">
@@ -53,8 +53,7 @@ export function AssignmentsPage() {
 
       {!active.length && (
         <p className="rounded-xl border border-dashed border-[var(--color-border)] p-8 text-center text-sm text-muted">
-          No active assignments. Assign a team to an incident from the Live Map
-          or Incidents page.
+          {dict.assignments.noActive}
         </p>
       )}
 
@@ -77,7 +76,9 @@ export function AssignmentsPage() {
                   disabled={busy === a.id}
                   onClick={() => setStatus(a.id, action.next)}
                 >
-                  {busy === a.id ? "...": action.label}
+                  {busy === a.id
+                    ? "..."
+                    : (dict.assignments.actions as Record<string, string>)[action.label] ?? action.label}
                 </Button>
               )}
             </div>
@@ -87,13 +88,13 @@ export function AssignmentsPage() {
             )}
 
             <div className="mt-1.5 flex flex-wrap gap-x-4 text-xs text-muted">
-              {a.distance_km != null && <span> {a.distance_km} km</span>}
-              {a.eta_minutes != null && <span> ETA {a.eta_minutes} min</span>}
+              {a.distance_km != null && <span>🚗 {a.distance_km} km</span>}
+              {a.eta_minutes != null && <span>⏱️ {dict.assignments.eta} {a.eta_minutes} min</span>}
               {a.allocation_score != null && (
-                <span> Score {Math.round(a.allocation_score)}</span>
+                <span>⭐ {dict.incidents.priorityScore} {Math.round(a.allocation_score)}</span>
               )}
               {a.is_manual_override && (
-                <span className="font-medium text-amber-600">Manual override</span>
+                <span className="font-medium text-amber-600">{dict.assignments.manualOverride}</span>
               )}
             </div>
 
@@ -108,14 +109,14 @@ export function AssignmentsPage() {
         onClick={() => setShowDone((s) => !s)}
         className="mt-2 text-sm font-medium text-[var(--color-accent)]"
       >
-        {showDone ? "Hide completed": "Show completed / cancelled"}
+        {showDone ? dict.assignments.hideDone : dict.assignments.showDone}
       </button>
 
       {showDone && (
         <div className="mt-2 opacity-80">
           {done.length === 0 ? (
             <p className="rounded-lg border border-dashed border-[var(--color-border)] p-6 text-center text-sm text-muted">
-              No completed or cancelled assignments yet.
+              {dict.assignments.noDone}
             </p>
           ) : (
             done.map((a) => {
@@ -137,12 +138,12 @@ export function AssignmentsPage() {
                     <Badge label={a.status} color={a.status} />
                   </div>
                   <div className="mt-1 flex flex-wrap gap-x-3 text-[11px] text-muted">
-                    {a.completed_at && <span>Completed {new Date(a.completed_at).toLocaleString()}</span>}
+                    {a.completed_at && <span>{dict.assignments.completed} {new Date(a.completed_at).toLocaleString()}</span>}
                     {a.arrived_at && !a.completed_at && (
-                      <span>Last update {new Date(a.updated_at).toLocaleString()}</span>
+                      <span>{dict.assignments.lastUpdate} {new Date(a.updated_at).toLocaleString()}</span>
                     )}
-                    {a.allocation_score != null && <span>Score {Math.round(a.allocation_score)}</span>}
-                    {a.is_manual_override && <span className="text-amber-600">Manual</span>}
+                    {a.allocation_score != null && <span>{dict.incidents.priorityScore} {Math.round(a.allocation_score)}</span>}
+                    {a.is_manual_override && <span className="text-amber-600">{dict.assignments.manualOverride}</span>}
                   </div>
                 </div>
               );
@@ -153,4 +154,3 @@ export function AssignmentsPage() {
     </div>
   );
 }
-

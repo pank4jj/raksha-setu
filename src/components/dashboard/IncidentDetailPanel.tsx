@@ -11,6 +11,7 @@ import type {
   ResourceTeam,
   Shelter,
 } from "@/types/database";
+import { useTranslation } from "@/context/LanguageContext";
 
 interface Recommendation {
   resourceId: string;
@@ -48,6 +49,7 @@ export function IncidentDetailPanel({
   onClose: () => void;
   onAssigned: () => void;
 }) {
+  const { dict } = useTranslation();
   const [recs, setRecs] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(false);
   const [assigning, setAssigning] = useState<string | null>(null);
@@ -58,7 +60,7 @@ export function IncidentDetailPanel({
 
   const activeAssignment = incident
     ? assignments.find((a) => a.incident_id === incident.id)
-: undefined;
+    : undefined;
 
   // Nearest shelters with free capacity - shelters that can absorb
   // everyone affected rank before partial-capacity ones, then distance.
@@ -99,59 +101,47 @@ export function IncidentDetailPanel({
         setHistory([]);
         return;
       }
-      const { data } = await createClient()
+      const supabase = createClient();
+      const { data } = await supabase
         .from("assignments")
         .select("*")
         .eq("incident_id", incident.id)
         .order("assigned_at", { ascending: false });
-      setHistory(data ?? []);
+      setHistory((data as Assignment[]) ?? []);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [incident?.id, incident?.status]);
+  }, [incident]);
 
-  const allocate = useCallback(async (incidentId: string) => {
+  const loadRecs = useCallback(async (inc: Incident) => {
+    await Promise.resolve();
     setLoading(true);
     setError(null);
-    setShowAll(false);
     try {
       const res = await fetch("/api/assignments/allocate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ incidentId }),
+        body: JSON.stringify({ incidentId: inc.id, topN: 10 }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Allocation failed");
+      if (!res.ok) throw new Error(json.error ?? "Failed to load recommendations");
       setRecs(json.recommendations ?? []);
     } catch (e) {
-      setError(e instanceof Error ? e.message: "Allocation failed");
-      setRecs([]);
+      setError(e instanceof Error ? e.message : "Failed to load recommendations");
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Reset per-incident state during render (React's recommended pattern)
-  const [prevIncidentId, setPrevIncidentId] = useState<string | null>(null);
-  if ((incident?.id ?? null) !== prevIncidentId) {
-    setPrevIncidentId(incident?.id ?? null);
-    setRecs([]);
-    setManualPick("");
-    setError(null);
-    setLightbox(false);
-  }
-
   useEffect(() => {
-    // Defer allocation fetch so setState never runs synchronously
-    if (incident && !isClosed && !activeAssignment && recs.length === 0)
+    if (incident && !["RESOLVED", "CANCELLED"].includes(incident.status)) {
       void (async () => {
-        await allocate(incident.id);
+        await loadRecs(incident);
       })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [incident?.id]);
+    }
+  }, [incident, loadRecs]);
 
-  async function assign(resourceId: string, rec?: Recommendation) {
+  async function assign(teamId: string, rec?: Recommendation) {
     if (!incident) return;
-    setAssigning(resourceId);
+    setAssigning(teamId);
     setError(null);
     try {
       const res = await fetch("/api/assignments", {
@@ -159,7 +149,7 @@ export function IncidentDetailPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           incidentId: incident.id,
-          resourceId,
+          resourceId: teamId,
           score: rec?.totalScore,
           breakdown: rec
             ? {
@@ -169,7 +159,7 @@ export function IncidentDetailPanel({
                 availabilityScore: rec.availabilityScore,
                 capacityScore: rec.capacityScore,
               }
-: undefined,
+            : undefined,
           explanation: rec?.explanation,
           distanceKm: rec?.distanceKm,
           etaMinutes: rec?.etaMinutes,
@@ -180,7 +170,7 @@ export function IncidentDetailPanel({
       if (!res.ok) throw new Error(json.error ?? "Assignment failed");
       onAssigned();
     } catch (e) {
-      setError(e instanceof Error ? e.message: "Assignment failed");
+      setError(e instanceof Error ? e.message : "Assignment failed");
     } finally {
       setAssigning(null);
     }
@@ -188,7 +178,9 @@ export function IncidentDetailPanel({
 
   if (!incident) return null;
 
-  const shown = showAll ? recs: recs.slice(0, 3);
+  const shown = showAll ? recs : recs.slice(0, 3);
+  const sevLabel = (dict.incidents.severities as Record<string, string>)[incident.severity] ?? incident.severity;
+  const catLabel = (dict.incidents.categories as Record<string, string>)[incident.type] ?? incident.type.replace(/_/g, " ");
 
   return (
     <div className="flex h-full flex-col overflow-y-auto p-4">
@@ -196,19 +188,19 @@ export function IncidentDetailPanel({
         <div>
           <span className="font-mono text-xs text-muted">{incident.incident_number}</span>
           <h2 className={`text-lg font-bold ${SEV_COLORS[incident.severity]}`}>
-            {incident.severity} · {incident.type.replace(/_/g, " ")}
+            {sevLabel} · {catLabel}
           </h2>
         </div>
-        <button onClick={onClose} className="rounded-md px-2 py-1 text-muted hover:bg-gray-100">✕</button>
+        <button onClick={onClose} title={dict.common.close} className="rounded-md px-2 py-1 text-muted hover:bg-gray-100">✕</button>
       </div>
 
       <p className="mb-2 text-sm">{incident.description}</p>
 
       <div className="mb-3 grid grid-cols-2 gap-2 text-xs text-muted">
-        <div> {incident.location_text ?? `${incident.latitude.toFixed(4)}, ${incident.longitude.toFixed(4)}`}</div>
-        <div> {incident.people_affected} people affected</div>
-        <div> Needs: {incident.required_capabilities.join(", ") || "general"}</div>
-        <div> Confidence: {Math.round(incident.confidence_score * 100)}%</div>
+        <div>📍 {incident.location_text ?? `${incident.latitude.toFixed(4)}, ${incident.longitude.toFixed(4)}`}</div>
+        <div>👥 {incident.people_affected} {dict.incidents.casualties}</div>
+        <div>🎯 {dict.incidents.category}: {incident.required_capabilities.join(", ") || "general"}</div>
+        <div>⚡ {dict.incidents.aiConfidence}: {Math.round(incident.confidence_score * 100)}%</div>
       </div>
 
       {incident.photo_url ? (
@@ -236,7 +228,7 @@ export function IncidentDetailPanel({
       {!isClosed && suggestedShelters.length > 0 && (
         <div className="mb-3 rounded-lg border border-[var(--color-border)] bg-white p-3 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wide text-muted">
-            🏥 Suggested Shelters
+            🏥 {dict.shelters.title}
           </div>
           <div className="mt-2 space-y-1.5">
             {suggestedShelters.map(({ shelter, free, distanceKm }) => (
@@ -387,7 +379,7 @@ export function IncidentDetailPanel({
 
       {!isClosed && !activeAssignment && (
         <div className="flex-1">
-          <h3 className="mb-2 text-sm font-semibold">Recommended Resources</h3>
+          <h3 className="mb-2 text-sm font-semibold">{dict.incidents.recommendedTeams}</h3>
 
           {loading && (
             <div className="space-y-2">
@@ -427,7 +419,7 @@ export function IncidentDetailPanel({
                   </div>
 
                   <div className="mt-1.5 text-xs text-muted">
-                     {r.distanceKm} km · ~{r.etaMinutes} min ETA
+                    🚗 {r.distanceKm} km · ~{r.etaMinutes} min ETA
                   </div>
 
                   {/* score breakdown bars */}
@@ -444,7 +436,7 @@ export function IncidentDetailPanel({
                         <span className="w-20 shrink-0 text-[11px] text-muted">{label}</span>
                         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100">
                           <div
-                            className={`h-full rounded-full ${v >= 75 ? "bg-green-500": v >= 40 ? "bg-amber-500": "bg-red-400"}`}
+                            className={`h-full rounded-full ${v >= 75 ? "bg-green-500" : v >= 40 ? "bg-amber-500" : "bg-red-400"}`}
                             style={{ width: `${v}%` }}
                           />
                         </div>
@@ -461,7 +453,7 @@ export function IncidentDetailPanel({
                     disabled={assigning !== null}
                     onClick={() => assign(r.resourceId, r)}
                   >
-                    {assigning === r.resourceId ? "Assigning...": "ASSIGN"}
+                    {assigning === r.resourceId ? dict.common.loading : dict.incidents.assignTeam}
                   </Button>
                 </div>
               );
@@ -472,7 +464,7 @@ export function IncidentDetailPanel({
               onClick={() => setShowAll((s) => !s)}
               className="mb-2 w-full text-sm font-medium text-[var(--color-accent)]"
             >
-              {showAll ? "Show top 3 only": `See all alternatives (${recs.length - 3})`}
+              {showAll ? "Show top 3 only" : `See all alternatives (${recs.length - 3})`}
             </button>
           )}
 
@@ -500,7 +492,7 @@ export function IncidentDetailPanel({
                 disabled={!manualPick || assigning !== null || Boolean(activeAssignment)}
                 onClick={() => assign(manualPick)}
               >
-                Assign
+                {dict.incidents.assignTeam}
               </Button>
             </div>
           </div>
@@ -521,7 +513,7 @@ export function IncidentDetailPanel({
             className="absolute right-4 top-4 rounded-lg bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20"
             onClick={() => setLightbox(false)}
           >
-            ✕ Close
+            ✕ {dict.common.close}
           </button>
         </div>
       )}

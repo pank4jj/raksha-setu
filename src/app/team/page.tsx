@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 import { useLiveData, isActiveAssignment } from "@/hooks/useLiveData";
 import { SignOutButton } from "@/components/layout/SignOutButton";
 import { Logo } from "@/components/ui/Logo";
+import { LanguageSelector } from "@/components/ui/LanguageSelector";
+import { useTranslation } from "@/context/LanguageContext";
 import type {
   Assignment,
   ResourceStatus,
@@ -12,20 +14,7 @@ import type {
   UserRole,
 } from "@/types/database";
 
-const NEXT_ACTION: Record<string, { next: string; label: string } | undefined> = {
-  PENDING: { next: "ACKNOWLEDGED", label: "Acknowledge" },
-  ACKNOWLEDGED: { next: "EN_ROUTE", label: "Start — En Route" },
-  EN_ROUTE: { next: "ON_SCENE", label: "Arrived On Scene" },
-  ON_SCENE: { next: "COMPLETED", label: "Mark Resolved" },
-};
-
 const STEPS = ["PENDING", "ACKNOWLEDGED", "EN_ROUTE", "ON_SCENE"] as const;
-const STEP_LABELS: Record<string, string> = {
-  PENDING: "Assigned",
-  ACKNOWLEDGED: "Acknowledged",
-  EN_ROUTE: "En route",
-  ON_SCENE: "On scene",
-};
 
 const STATUS_DOTS: Record<string, string> = {
   AVAILABLE: "bg-green-500",
@@ -45,6 +34,7 @@ function Skeleton({ className }: { className?: string }) {
 export default function TeamPage() {
   const { teams, incidents, assignments, connected, initialLoading, refresh } =
     useLiveData();
+  const { dict } = useTranslation();
   const [role, setRole] = useState<UserRole | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [userName, setUserName] = useState("");
@@ -137,7 +127,14 @@ export default function TeamPage() {
   }
 
   async function advanceAssignment(a: Assignment) {
-    const action = NEXT_ACTION[a.status];
+    const actionLabels = dict.team.actionLabels;
+    const actionMap: Record<string, { next: string; label: string } | undefined> = {
+      PENDING: { next: "ACKNOWLEDGED", label: actionLabels.Acknowledge },
+      ACKNOWLEDGED: { next: "EN_ROUTE", label: actionLabels["En Route"] },
+      EN_ROUTE: { next: "ON_SCENE", label: actionLabels["On Scene"] },
+      ON_SCENE: { next: "COMPLETED", label: actionLabels.Resolve },
+    };
+    const action = actionMap[a.status];
     if (!action) return;
     setBusy(true);
     setError(null);
@@ -167,6 +164,17 @@ export default function TeamPage() {
     setBusy(false);
   }
 
+  function getAction(status: string) {
+    const actionLabels = dict.team.actionLabels;
+    const actionMap: Record<string, { next: string; label: string } | undefined> = {
+      PENDING: { next: "ACKNOWLEDGED", label: actionLabels.Acknowledge },
+      ACKNOWLEDGED: { next: "EN_ROUTE", label: actionLabels["En Route"] },
+      EN_ROUTE: { next: "ON_SCENE", label: actionLabels["On Scene"] },
+      ON_SCENE: { next: "COMPLETED", label: actionLabels.Resolve },
+    };
+    return actionMap[status];
+  }
+
   const wrongRole =
     role !== null && !["FIELD_TEAM", "OPERATOR", "ADMIN"].includes(role);
 
@@ -177,9 +185,9 @@ export default function TeamPage() {
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-2.5">
             <Logo size={48} />
-            <div className="min-w-0">
+<div className="min-w-0">
               <div className="truncate text-sm font-bold leading-tight">
-                Field Team Console
+                {dict.team.title}
               </div>
               <div className="flex items-center gap-1.5 text-xs text-muted">
                 <span
@@ -189,24 +197,26 @@ export default function TeamPage() {
                 />
                 <span className="truncate">
                   {!connected
-                    ? "Reconnecting…"
-: userName || "Rescue operations"}
+                    ? dict.team.reconnecting
+                    : userName || dict.team.rescueOperations}
                 </span>
               </div>
             </div>
           </div>
-          <SignOutButton
-            label="Sign out"
-            className="shrink-0 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-medium text-muted transition-colors hover:bg-gray-50 hover:text-foreground disabled:opacity-60 sm:text-sm"
-          />
+          <div className="flex items-center gap-3">
+            <SignOutButton
+              label={dict.common.signOut}
+              className="shrink-0 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-medium text-muted transition-colors hover:bg-gray-50 hover:text-foreground disabled:opacity-60 sm:text-sm"
+            />
+            <LanguageSelector variant="compact" />
+          </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-6xl px-4 pb-16 pt-5 sm:px-6 sm:pt-7">
         {wrongRole && (
           <p className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
-            Your account role is {role}. Register as a Field Rescue Team to use
-            this console.
+            {dict.team.wrongRole.replace("{role}", role!)}
           </p>
         )}
 
@@ -224,7 +234,7 @@ export default function TeamPage() {
             <>
               <div className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm">
                 <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">
-                  Active Missions
+                  {dict.team.activeMissions}
                 </div>
                 <div className="mt-1 text-2xl font-bold tabular-nums">
                   {missions.length}
@@ -232,7 +242,7 @@ export default function TeamPage() {
               </div>
               <div className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm">
                 <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">
-                  People Waiting
+                  {dict.team.peopleWaiting}
                 </div>
                 <div className="mt-1 text-2xl font-bold tabular-nums">
                   {peopleHelped}
@@ -240,7 +250,7 @@ export default function TeamPage() {
               </div>
               <div className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm">
                 <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">
-                  Resolved (all teams)
+                  {dict.team.resolvedAllTeams}
                 </div>
                 <div className="mt-1 text-2xl font-bold tabular-nums">
                   {completedCount ?? "—"}
@@ -254,9 +264,9 @@ export default function TeamPage() {
         {initialLoading ? (
           <Skeleton className="mb-7 h-28 rounded-2xl" />
         ): myTeams.length > 0 ? (
-          <section className="mb-7" aria-label="My teams">
+          <section className="mb-7" aria-label={dict.team.myTeams}>
             <h2 className="mb-3 px-1 text-sm font-bold uppercase tracking-wider text-muted">
-              My Teams
+              {dict.team.myTeams}
             </h2>
             <div className="grid gap-3 sm:grid-cols-2">
               {myTeams.map((t: ResourceTeam) => (
@@ -287,7 +297,7 @@ export default function TeamPage() {
                       onClick={() => setStatus(t.id, "AVAILABLE")}
                       className="mt-3 h-10 w-full rounded-lg border border-cyan-300 bg-cyan-50 text-xs font-semibold text-cyan-700 transition-colors hover:bg-cyan-100 active:scale-[0.99]"
                     >
-                      Confirm Returned to Base
+                      {dict.team.confirmReturned}
                     </button>
                   )}
                   {["AVAILABLE", "UNAVAILABLE"].includes(t.status) && (
@@ -302,7 +312,7 @@ export default function TeamPage() {
                           : "border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
                       }`}
                     >
-                      {t.status === "AVAILABLE" ? "Go Off-Duty" : "Report On-Duty"}
+                      {t.status === "AVAILABLE" ? dict.team.goOffDuty : dict.team.reportOnDuty}
                     </button>
                   )}
                 </div>
@@ -313,9 +323,9 @@ export default function TeamPage() {
 
         {/* Claim flow */}
         {!initialLoading && myTeams.length === 0 && claimable.length > 0 && (
-          <section className="mb-7" aria-label="Claim a team">
+          <section className="mb-7" aria-label={dict.team.claimYourTeam}>
             <h2 className="mb-3 px-1 text-sm font-bold uppercase tracking-wider text-muted">
-              Claim Your Team
+              {dict.team.claimYourTeam}
             </h2>
             <div className="grid gap-2 sm:grid-cols-2">
               {claimable.map((t) => (
@@ -330,7 +340,7 @@ export default function TeamPage() {
                     <span className="text-xs text-muted">· {t.name}</span>
                   </span>
                   <span className="shrink-0 text-xs font-semibold text-[var(--color-accent)]">
-                    Claim →
+                    {dict.team.claim}
                   </span>
                 </button>
               ))}
@@ -341,9 +351,9 @@ export default function TeamPage() {
         {!initialLoading && myTeams.length === 0 && claimable.length === 0 && (
           <div className="mb-7 rounded-2xl border border-dashed border-[var(--color-border)] bg-white p-8 text-center">
             <div className="text-3xl"></div>
-            <p className="mt-2 text-sm font-medium">No team linked yet</p>
+            <p className="mt-2 text-sm font-medium">{dict.team.noTeamLinked}</p>
             <p className="mt-1 text-xs text-muted">
-              Ask a control-room operator to link your account to a rescue team.
+              {dict.team.askOperator}
             </p>
           </div>
         )}
@@ -364,9 +374,9 @@ export default function TeamPage() {
           ): missions.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-white p-8 text-center">
               <div className="text-3xl"></div>
-              <p className="mt-2 text-sm font-medium">On standby</p>
+              <p className="mt-2 text-sm font-medium">{dict.team.onStandby}</p>
               <p className="mt-1 text-xs text-muted">
-                New assignments appear here instantly when control room dispatches you.
+                {dict.team.standbyDesc}
               </p>
             </div>
           ): (
@@ -374,8 +384,8 @@ export default function TeamPage() {
               {missions.map((a) => {
                 const inc = incidentById.get(a.incident_id);
                 const team = teams.find((t) => t.id === a.resource_id);
-                const action = NEXT_ACTION[a.status];
                 const stepIdx = STEPS.indexOf(a.status as (typeof STEPS)[number]);
+                const stepLabels = dict.team.stepLabels;
                 return (
                   <li
                     key={a.id}
@@ -416,7 +426,7 @@ export default function TeamPage() {
                                 current ? "text-[var(--color-accent)]": "text-muted"
                               }`}
                             >
-                              {STEP_LABELS[s]}
+                              {stepLabels[s as keyof typeof stepLabels]}
                             </span>
                           </div>
                         );
@@ -427,7 +437,7 @@ export default function TeamPage() {
                       <div className="flex items-center justify-between gap-2">
                         {a.status === "PENDING" && (
                           <span className="inline-flex animate-pulse items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-bold text-red-600">
-                             NEW DISPATCH
+                             {dict.team.newDispatch}
                           </span>
                         )}
                         {a.status !== "PENDING" && (
@@ -437,7 +447,7 @@ export default function TeamPage() {
                         )}
                         {a.eta_minutes != null && (
                           <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-semibold text-gray-600">
-                            ETA {Math.round(a.eta_minutes)} min ·{" "}
+                            {dict.team.eta} {Math.round(a.eta_minutes)} min ·{" "}
                             {(a.distance_km ?? 0).toFixed(1)} km
                           </span>
                         )}
@@ -466,7 +476,7 @@ export default function TeamPage() {
                               rel="noreferrer"
                               className="inline-flex h-11 items-center justify-center rounded-lg border border-[var(--color-border)] text-sm font-medium transition-colors hover:bg-gray-50 active:scale-[0.99]"
                             >
-                               Navigate
+                               {dict.team.navigate}
                             </a>
                             {a.status !== "PENDING" && inc.status !== "ESCALATED" && (
                               <button
@@ -474,22 +484,22 @@ export default function TeamPage() {
                                 onClick={() => escalate(inc.id)}
                                 className="inline-flex h-11 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-sm font-medium text-red-600 transition-colors hover:bg-red-100 active:scale-[0.99]"
                               >
-                                 Need Backup
+                                 {dict.team.needBackup}
                               </button>
                             )}
                           </div>
                         </>
                       ): (
-                        <p className="mt-2 text-sm text-muted">Loading incident…</p>
+                        <p className="mt-2 text-sm text-muted">{dict.team.loadingIncident}</p>
                       )}
 
-                      {action && (
+                      {getAction(a.status) && (
                         <button
                           disabled={busy}
                           onClick={() => advanceAssignment(a)}
                           className="mt-4 h-12 w-full rounded-xl bg-[var(--color-accent)] text-sm font-bold text-white shadow-sm transition-all hover:opacity-90 active:scale-[0.99] disabled:opacity-40"
                         >
-                          {action.label} →
+                          {getAction(a.status)!.label} →
                         </button>
                       )}
                     </div>

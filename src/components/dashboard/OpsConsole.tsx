@@ -7,6 +7,7 @@ import { IncidentListPanel, type IncidentFilter } from "./IncidentListPanel";
 import { IncidentDetailPanel } from "./IncidentDetailPanel";
 import { ResourcePanel, type ReallocRec } from "./ResourcePanel";
 import { ShelterPanel } from "./ShelterPanel";
+import { useTranslation } from "@/context/LanguageContext";
 
 const OpsMap = dynamic(() => import("@/components/map/OpsMap"), {
   ssr: false,
@@ -22,6 +23,7 @@ type Tab = "incidents" | "resources" | "shelters";
 export function OpsConsole() {
   const { incidents, teams, shelters, assignments, alerts, connected, refresh, syncAlerts } =
     useLiveData();
+  const { dict } = useTranslation();
 
   const [tab, setTab] = useState<Tab>("incidents");
   const [filter, setFilter] = useState<IncidentFilter>("ACTIVE");
@@ -56,14 +58,14 @@ export function OpsConsole() {
   const seenCritical = useRef(new Set<string>());
   useEffect(() => {
     incidents
-.filter((i) => i.severity === "CRITICAL" && i.status === "REPORTED")
-.forEach((i) => {
+      .filter((i) => i.severity === "CRITICAL" && i.status === "REPORTED")
+      .forEach((i) => {
         if (!seenCritical.current.has(i.id)) {
           seenCritical.current.add(i.id);
-          showToast(` CRITICAL: ${i.incident_number} — ${i.description.slice(0, 60)}...`);
+          showToast(`⚠️ ${dict.dashboard.criticalIncidentArrived}: ${i.incident_number} — ${i.description.slice(0, 60)}...`);
         }
       });
-  }, [incidents, showToast]);
+  }, [incidents, showToast, dict.dashboard.criticalIncidentArrived]);
 
   const selected = incidents.find((i) => i.id === selectedId) ?? null;
 
@@ -95,7 +97,7 @@ export function OpsConsole() {
       if (!res.ok) throw new Error(json.error);
       if (json.reallocations && json.reallocations.length > 0) {
         setReallocations(json.reallocations);
-        showToast("Resource became unavailable — system reallocated!");
+        showToast(dict.dashboard.reallocatedToast);
       }
       refresh();
       return json as { reallocations: ReallocRec[] | null };
@@ -111,9 +113,9 @@ export function OpsConsole() {
         <div className="flex border-b border-[var(--color-border)]">
           {(
             [
-              ["incidents", `Incidents (${activeCount})`],
-              ["resources", `Teams (${availableTeams}/${teams.length})`],
-              ["shelters", "Shelters"],
+              ["incidents", `${dict.dashboard.tabs.incidents} (${activeCount})`],
+              ["resources", `${dict.dashboard.tabs.teams} (${availableTeams}/${teams.length})`],
+              ["shelters", dict.dashboard.tabs.shelters],
             ] as [Tab, string][]
           ).map(([key, label]) => {
             const unassignedCritical = incidents.filter(
@@ -189,7 +191,7 @@ export function OpsConsole() {
         {/* IMD warning banner */}
         {alerts.length > 0 && (
           <div className="absolute inset-x-3 top-3 z-[1000] flex items-center gap-2 rounded-lg border border-orange-300 bg-orange-50/95 px-3 py-2 text-xs font-medium text-orange-800 shadow-md backdrop-blur">
-             {alerts[0].title}
+             ⚠️ {alerts[0].title}
             {alerts.length > 1 && (
               <span className="text-orange-600">(+{alerts.length - 1} more)</span>
             )}
@@ -197,7 +199,7 @@ export function OpsConsole() {
               onClick={() => setAlertsOpen((o) => !o)}
               className="ml-auto shrink-0 rounded-md border border-orange-300 px-2 py-0.5"
             >
-              Details
+              {dict.common.details}
             </button>
           </div>
         )}
@@ -206,7 +208,7 @@ export function OpsConsole() {
         {alertsOpen && alerts.length > 0 && (
           <div className="absolute left-3 top-12 z-[1050] w-80 space-y-2 rounded-xl border border-[var(--color-border)] bg-white/97 p-3 shadow-lg backdrop-blur">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-bold">Weather Warnings</span>
+              <span className="text-sm font-bold">{dict.dashboard.weatherWarnings}</span>
               <button
                 onClick={() => setAlertsOpen(false)}
                 className="text-muted hover:text-foreground"
@@ -221,7 +223,7 @@ export function OpsConsole() {
                   {a.description}
                 </p>
                 <div className="mt-1 text-[10px] uppercase tracking-wide text-muted">
-                  {a.source} · {a.severity} · until{" "}
+                  {a.source} · {a.severity} · {dict.dashboard.weatherWarningsUntil}{" "}
                   {new Date(a.effective_until ?? a.effective_from).toLocaleString()}
                 </div>
               </div>
@@ -237,7 +239,7 @@ export function OpsConsole() {
               checked={layers.incidents}
               onChange={(e) => setLayers((l) => ({...l, incidents: e.target.checked }))}
             />
-             Incidents
+             📍 {dict.dashboard.mapLayers.incidents}
           </label>
           <label className="flex cursor-pointer items-center gap-1.5">
             <input
@@ -245,7 +247,7 @@ export function OpsConsole() {
               checked={layers.resources}
               onChange={(e) => setLayers((l) => ({...l, resources: e.target.checked }))}
             />
-             Teams
+             🚑 {dict.dashboard.mapLayers.teams}
           </label>
           <label className="flex cursor-pointer items-center gap-1.5">
             <input
@@ -253,7 +255,7 @@ export function OpsConsole() {
               checked={layers.shelters}
               onChange={(e) => setLayers((l) => ({...l, shelters: e.target.checked }))}
             />
-             Shelters
+             🏠 {dict.dashboard.mapLayers.shelters}
           </label>
           <hr className="my-0.5 border-[var(--color-border)]" />
           <label className="flex cursor-pointer items-center gap-1.5">
@@ -262,7 +264,7 @@ export function OpsConsole() {
               checked={showHeatmap}
               onChange={(e) => setShowHeatmap(e.target.checked)}
             />
-             Heatmap
+             🔥 {dict.dashboard.mapLayers.heatmap}
           </label>
           <label className="flex cursor-pointer items-center gap-1.5">
             <input
@@ -270,30 +272,30 @@ export function OpsConsole() {
               checked={layers.radar}
               onChange={(e) => setLayers((l) => ({ ...l, radar: e.target.checked }))}
             />
-             Rain radar
+             🌧️ {dict.dashboard.mapLayers.rainRadar}
           </label>
         </div>
 
         {/* Stats bar */}
         <div className="absolute bottom-3 left-3 right-3 z-[1000] flex gap-2">
-          <Stat label="Active" value={activeCount} tone="text-[var(--color-accent)]" />
+          <Stat label={dict.dashboard.stats.active} value={activeCount} tone="text-[var(--color-accent)]" />
           <Stat
-            label="Critical"
+            label={dict.dashboard.stats.critical}
             value={criticalCount}
             tone={criticalCount ? "text-[var(--color-critical)]": ""}
           />
           <Stat
-            label="Teams Ready"
+            label={dict.dashboard.stats.teamsReady}
             value={`${availableTeams}/${teams.length}`}
             tone="text-green-600"
           />
           <Stat
-            label="Deployed"
+            label={dict.dashboard.stats.deployed}
             value={assignments.filter(isActiveAssignment).length}
             tone=""
           />
           <Stat
-            label="Shelter Load"
+            label={dict.dashboard.stats.shelterLoad}
             value={`${capacity ? Math.round((occupancy / capacity) * 100): 0}%`}
             tone=""
           />
