@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { SCENARIOS } from "@/lib/simulation";
+import { useTranslation } from "@/context/LanguageContext";
 
 export default function SimulationPage() {
+  const { dict } = useTranslation();
   const [status, setStatus] = useState<{
     running: boolean;
     elapsedSec?: number;
@@ -25,9 +27,7 @@ export default function SimulationPage() {
     })();
     const t = setInterval(() => void refresh(), 2000);
     return () => clearInterval(t);
-     
   }, []);
-
 
   async function act(action: string, scenarioId?: string) {
     setBusy(true);
@@ -59,17 +59,18 @@ export default function SimulationPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="mb-1 text-2xl font-bold">Disaster Simulation</h1>
+      <h1 className="mb-1 text-2xl font-bold">{dict.simulation.title}</h1>
       <p className="mb-6 text-sm text-muted">
-        Injects a scripted emergency into the live system. Watch it unfold on
-        the Live Map — every change streams in realtime.
+        {dict.simulation.subtitle}
       </p>
 
       {SCENARIOS.map((s) => (
         <div key={s.id} className="mb-4 rounded-xl border border-[var(--color-border)] bg-white p-5 shadow-sm">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="font-bold">{s.name}</h2>
+              <h2 className="font-bold">
+                {s.id === "rourkela_koel_flood" ? dict.simulation.koelFloodScenario : s.name}
+              </h2>
               <p className="mt-1 text-sm text-muted">{s.description}</p>
             </div>
             <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-muted">
@@ -81,7 +82,7 @@ export default function SimulationPage() {
             disabled={busy || status.running}
             onClick={() => act("start", s.id)}
           >
-            ▶ Start Simulation
+            ▶ {dict.simulation.startSimulation}
           </Button>
         </div>
       ))}
@@ -91,16 +92,16 @@ export default function SimulationPage() {
         <div className="flex items-center justify-between">
           <div>
             <span className="text-xs font-medium uppercase tracking-wide text-muted">
-              Engine status
+              {dict.common.status}
             </span>
             <div className="mt-0.5 font-semibold">
               {status.running ? (
                 <span className="text-[var(--color-accent)]">
-                  ● Running — {status.scenarioName} ({status.elapsedSec}s /{" "}
+                  ● {dict.simulation.running} — {status.scenarioName} ({status.elapsedSec}s /{" "}
                   {status.durationSec}s)
                 </span>
               ) : (
-                <span className="text-muted">Idle</span>
+                <span className="text-muted">{dict.simulation.stopped}</span>
               )}
             </div>
           </div>
@@ -110,7 +111,7 @@ export default function SimulationPage() {
             disabled={busy || !status.running}
             onClick={() => act("stop")}
           >
-            ⏹ Stop
+            ⏹ {dict.simulation.stopSimulation}
           </Button>
         </div>
 
@@ -131,7 +132,7 @@ export default function SimulationPage() {
         <div className="flex items-center justify-between gap-3">
           <div>
             <span className="text-xs font-medium uppercase tracking-wide text-muted">
-              Demo reset
+              {dict.simulation.resetDemo}
             </span>
             <p className="text-sm text-muted">
               Clears all incidents/assignments and restores seed state.
@@ -147,7 +148,7 @@ export default function SimulationPage() {
               }
             }}
           >
-            ♻ Reset
+            ♻ {busy ? dict.simulation.resetting : dict.simulation.resetDemo}
           </Button>
         </div>
 

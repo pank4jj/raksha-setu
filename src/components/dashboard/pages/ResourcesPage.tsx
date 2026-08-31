@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { useLiveData } from "@/hooks/useLiveData";
 import { ResourcePanel, type ReallocRec } from "./../ResourcePanel";
+import { useTranslation } from "@/context/LanguageContext";
 
 export function ResourcesPage() {
   const { teams, refresh } = useLiveData();
+  const { dict } = useTranslation();
   const [reallocations, setReallocations] = useState<ReallocRec[] | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -20,7 +22,7 @@ export function ResourcesPage() {
       if (!res.ok) throw new Error(json.error);
       if (json.reallocations && json.reallocations.length > 0) {
         setReallocations(json.reallocations);
-        setToast("System reallocated the orphaned incident!");
+        setToast(dict.dashboard.reallocatedToast);
         setTimeout(() => setToast(null), 4000);
       }
       refresh();
@@ -33,7 +35,7 @@ export function ResourcesPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="mb-4 text-2xl font-bold">Rescue Teams</h1>
+      <h1 className="mb-4 text-2xl font-bold">{dict.resources.title}</h1>
       <ResourcePanel
         teams={teams}
         onStatusChange={changeTeamStatus}

@@ -4,7 +4,7 @@ export function Logo({ size = 48 }: { size?: number }) {
   return (
     <Image
       src="/logo.png"
-      alt="RakshaSetu"
+      alt="Anvay"
       width={size}
       height={size}
       className="shrink-0 object-contain"

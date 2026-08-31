@@ -4,10 +4,12 @@ import { useMemo, useState } from "react";
 import { useLiveData } from "@/hooks/useLiveData";
 import { IncidentListPanel, type IncidentFilter } from "../IncidentListPanel";
 import { IncidentDetailPanel } from "../IncidentDetailPanel";
+import { useTranslation } from "@/context/LanguageContext";
 
 // Full-page incidents management view (list + detail side by side)
 export function IncidentsPage() {
   const { incidents, teams, shelters, assignments, connected, refresh } = useLiveData();
+  const { dict } = useTranslation();
   const [filter, setFilter] = useState<IncidentFilter>("ACTIVE");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -25,10 +27,10 @@ export function IncidentsPage() {
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Incidents</h1>
+        <h1 className="text-2xl font-bold">{dict.incidents.title}</h1>
         <span
           className={`h-2 w-2 rounded-full ${connected ? "bg-green-500" : "animate-pulse bg-amber-500"}`}
-          title={connected ? "Live" : "Reconnecting"}
+          title={connected ? dict.common.realtimeConnected : dict.common.reconnecting}
         />
       </div>
 
@@ -58,7 +60,7 @@ export function IncidentsPage() {
             />
           ) : (
             <div className="flex h-full items-center justify-center text-sm text-muted">
-              Select an incident to view details and allocate resources.
+              {dict.incidents.searchPlaceholder}
             </div>
           )}
         </div>

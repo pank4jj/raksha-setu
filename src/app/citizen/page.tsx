@@ -8,6 +8,8 @@ import { AreaStatus } from "@/components/weather/AreaStatus";
 import { SignOutButton } from "@/components/layout/SignOutButton";
 import type { Alert, Incident, Shelter } from "@/types/database";
 import { Logo } from "@/components/ui/Logo";
+import { useTranslation } from "@/context/LanguageContext";
+import { LanguageSelector } from "@/components/ui/LanguageSelector";
 
 const ALERT_COLORS: Record<string, { bar: string; bg: string; text: string }> = {
   EXTREME: { bar: "#dc2626", bg: "bg-red-50", text: "text-red-700" },
@@ -16,16 +18,16 @@ const ALERT_COLORS: Record<string, { bar: string; bg: string; text: string }> = 
   MINOR: { bar: "#16a34a", bg: "bg-green-50", text: "text-green-700" },
 };
 
-const STATUS_CHIPS: Record<string, { label: string; cls: string }> = {
-  REPORTED: { label: "Submitted", cls: "bg-gray-100 text-gray-600" },
-  VALIDATED: { label: "Verified", cls: "bg-blue-50 text-blue-700" },
-  UNASSIGNED: { label: "Awaiting team", cls: "bg-amber-50 text-amber-700" },
-  ASSIGNED: { label: "Help dispatched", cls: "bg-blue-50 text-blue-700" },
-  EN_ROUTE: { label: "Team on the way", cls: "bg-indigo-50 text-indigo-700" },
-  ON_SCENE: { label: "Team on scene", cls: "bg-purple-50 text-purple-700" },
-  RESOLVED: { label: "Resolved ✓", cls: "bg-green-50 text-green-700" },
-  ESCALATED: { label: "Escalated", cls: "bg-red-50 text-red-700" },
-  CANCELLED: { label: "Closed", cls: "bg-gray-100 text-gray-500" },
+const STATUS_CHIP_CLASSES: Record<string, string> = {
+  REPORTED: "bg-gray-100 text-gray-600",
+  VALIDATED: "bg-blue-50 text-blue-700",
+  UNASSIGNED: "bg-amber-50 text-amber-700",
+  ASSIGNED: "bg-blue-50 text-blue-700",
+  EN_ROUTE: "bg-indigo-50 text-indigo-700",
+  ON_SCENE: "bg-purple-50 text-purple-700",
+  RESOLVED: "bg-green-50 text-green-700",
+  ESCALATED: "bg-red-50 text-red-700",
+  CANCELLED: "bg-gray-100 text-gray-500",
 };
 
 function timeAgo(iso: string) {
@@ -43,6 +45,7 @@ function Skeleton({ className }: { className?: string }) {
 export default function CitizenDashboard() {
   const { incidents, shelters, alerts, connected, initialLoading, refresh } =
     useLiveData();
+  const { dict } = useTranslation();
   const [userId, setUserId] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>("");
 
@@ -60,11 +63,15 @@ export default function CitizenDashboard() {
 
   const myReports = userId
     ? incidents.filter((i) => i.reporter_id === userId)
-: [];
+    : [];
   const openReports = myReports.filter(
     (i) => !["RESOLVED", "CANCELLED"].includes(i.status)
   );
   const topAlerts = alerts.slice(0, 3);
+
+  const getStatusChipLabel = (status: string) => {
+    return (dict.citizenPortal.statusChips as Record<string, string>)[status] ?? status;
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -75,28 +82,31 @@ export default function CitizenDashboard() {
             <Logo size={48} />
             <div className="min-w-0">
               <div className="truncate text-sm font-bold leading-tight">
-                RakshaSetu
+                {dict.common.appName}
               </div>
               <div className="flex items-center gap-1.5 text-xs text-muted">
                 <span
                   className={`inline-block h-1.5 w-1.5 rounded-full ${
-                    connected ? "bg-green-500": "bg-amber-400"
+                    connected ? "bg-green-500" : "bg-amber-400"
                   }`}
                 />
                 <span className="truncate">
                   {!connected
-                    ? "Reconnecting…"
-: userName
-                      ? `Live · Hi, ${userName}`
-: "Live"}
+                    ? dict.citizenPortal.reconnecting
+                    : userName
+                      ? `${dict.citizenPortal.live} · ${dict.citizenPortal.hiUser}, ${userName}`
+                      : dict.citizenPortal.live}
                 </span>
               </div>
             </div>
           </div>
-          <SignOutButton
-            label="Sign out"
-            className="shrink-0 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-medium text-muted transition-colors hover:bg-gray-50 hover:text-foreground disabled:opacity-60 sm:text-sm"
-          />
+          <div className="flex items-center gap-2">
+            <LanguageSelector variant="compact" />
+            <SignOutButton
+              label={dict.common.signOut}
+              className="shrink-0 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-medium text-muted transition-colors hover:bg-gray-50 hover:text-foreground disabled:opacity-60 sm:text-sm"
+            />
+          </div>
         </div>
       </header>
 
@@ -109,10 +119,10 @@ export default function CitizenDashboard() {
         {/* Alerts */}
         {initialLoading ? (
           <Skeleton className="mb-5 h-[72px] rounded-xl" />
-        ): topAlerts.length > 0 ? (
+        ) : topAlerts.length > 0 ? (
           <section
             className="mb-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3"
-            aria-label="Active warnings"
+            aria-label={dict.citizenPortal.activeWarnings}
           >
             {topAlerts.map((a: Alert) => {
               const c = ALERT_COLORS[a.severity] ?? ALERT_COLORS.MODERATE;
@@ -122,7 +132,7 @@ export default function CitizenDashboard() {
                   className={`flex gap-3 rounded-xl p-3.5 ${c.bg} transition-transform hover:-translate-y-px`}
                   style={{ borderLeft: `4px solid ${c.bar}` }}
                 >
-                    <div className="min-w-0">
+                  <div className="min-w-0">
                     <div className={`text-sm font-semibold leading-snug ${c.text}`}>
                       {a.title}
                     </div>
@@ -136,7 +146,7 @@ export default function CitizenDashboard() {
               );
             })}
           </section>
-        ): null}
+        ) : null}
 
         {/* Primary actions */}
         <section className="mb-8 grid gap-3 sm:grid-cols-[2fr_1fr]">
@@ -146,32 +156,32 @@ export default function CitizenDashboard() {
           >
             <div>
               <div className="text-lg font-bold sm:text-xl">
-                Report an Emergency
+                {dict.citizenPortal.reportEmergency}
               </div>
               <div className="mt-0.5 text-xs opacity-80 sm:text-sm">
-                Flood · Fire · Medical — takes under a minute
+                {dict.citizenPortal.reportEmergencySub}
               </div>
             </div>
-            
+            <span className="text-2xl transition-transform group-hover:translate-x-1">→</span>
           </Link>
           <a
             href="tel:112"
             className="flex items-center justify-center gap-2 rounded-2xl border border-[var(--color-border)] bg-white px-5 py-4 text-sm font-semibold text-[var(--color-primary)] shadow-sm transition-colors hover:bg-red-50 active:scale-[0.99]"
           >
-            Call helpline 112
+            📞 {dict.citizenPortal.callHelpline}
           </a>
         </section>
 
         {/* Content grid */}
         <div className="grid items-start gap-8 lg:grid-cols-[3fr_2fr]">
           {/* My reports */}
-          <section aria-label="My reports">
+          <section aria-label={dict.citizenPortal.myReports}>
             <div className="mb-3 flex items-center justify-between px-1">
               <h2 className="text-sm font-bold uppercase tracking-wider text-muted">
-                My Reports{" "}
+                {dict.citizenPortal.myReports}{" "}
                 {myReports.length > 0 && (
                   <span className="ml-1 rounded-full bg-gray-200 px-2 py-0.5 text-[11px] font-semibold text-gray-600">
-                    {openReports.length} open
+                    {openReports.length} {dict.citizenPortal.open}
                   </span>
                 )}
               </h2>
@@ -180,7 +190,7 @@ export default function CitizenDashboard() {
                   onClick={() => refresh()}
                   className="rounded-lg px-2 py-1 text-xs font-medium text-[var(--color-accent)] transition-colors hover:bg-blue-50"
                 >
-                  ↻ Refresh
+                  ↻ {dict.citizenPortal.refresh}
                 </button>
               )}
             </div>
@@ -195,25 +205,27 @@ export default function CitizenDashboard() {
                   </li>
                 ))}
               </ul>
-            ): myReports.length === 0 ? (
+            ) : myReports.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-white p-8 text-center">
-                
-                <p className="mt-2 text-sm font-medium">No reports yet</p>
+                <p className="mt-2 text-sm font-medium">{dict.citizenPortal.noReportsYet}</p>
                 <p className="mx-auto mt-1 max-w-xs text-xs leading-relaxed text-muted">
-                  When you report an emergency it appears here with live status
-                  updates as response teams act on it.
+                  {dict.citizenPortal.noReportsDesc}
                 </p>
                 <Link
                   href="/report"
                   className="mt-4 inline-flex h-10 items-center rounded-xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary-dark)]"
                 >
-                  Make your first report
+                  {dict.citizenPortal.makeFirstReport}
                 </Link>
               </div>
-            ): (
+            ) : (
               <ul className="space-y-2.5">
                 {myReports.slice(0, 10).map((r: Incident) => {
-                  const chip = STATUS_CHIPS[r.status] ?? STATUS_CHIPS.REPORTED;
+                  const label = getStatusChipLabel(r.status);
+                  const cls = STATUS_CHIP_CLASSES[r.status] ?? STATUS_CHIP_CLASSES.REPORTED;
+                  const catLabel =
+                    (dict.incidents.categories as Record<string, string>)[r.type] ??
+                    r.type.replace(/_/g, " ");
                   return (
                     <li
                       key={r.id}
@@ -222,21 +234,18 @@ export default function CitizenDashboard() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="truncate text-sm font-semibold">
-                            <span className="mr-1" aria-hidden>
-                              
-                            </span>
-                            {r.location_text ?? r.type.replace(/_/g, " ")}
+                            {r.location_text ?? catLabel}
                           </div>
                           <div className="mt-0.5 text-xs text-muted">
                             <span className="font-mono">{r.incident_number}</span>{" "}
                             · {timeAgo(r.reported_at)} · {r.people_affected}{" "}
-                            {r.people_affected === 1 ? "person": "people"}
+                            {dict.incidents.casualties}
                           </div>
                         </div>
                         <span
-                          className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${chip.cls}`}
+                          className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${cls}`}
                         >
-                          {chip.label}
+                          {label}
                         </span>
                       </div>
                       <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-muted">
@@ -250,9 +259,9 @@ export default function CitizenDashboard() {
           </section>
 
           {/* Shelters */}
-          <section aria-label="Relief shelters">
+          <section aria-label={dict.citizenPortal.reliefShelters}>
             <h2 className="mb-3 px-1 text-sm font-bold uppercase tracking-wider text-muted">
-              Relief Shelters
+              {dict.citizenPortal.reliefShelters}
             </h2>
             {initialLoading ? (
               <ul className="space-y-2.5">
@@ -264,11 +273,11 @@ export default function CitizenDashboard() {
                   </li>
                 ))}
               </ul>
-            ): shelters.length === 0 ? (
+            ) : shelters.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-white p-6 text-center text-sm text-muted">
-                No shelter information available right now.
+                {dict.citizenPortal.noShelterInfo}
               </div>
-            ): (
+            ) : (
               <ul className="space-y-2.5">
                 {shelters.map((s: Shelter) => {
                   const pct = Math.min(
@@ -276,13 +285,20 @@ export default function CitizenDashboard() {
                     Math.round((s.current_occupancy / s.total_capacity) * 100)
                   );
                   const color =
-                    pct >= 90 ? "#dc2626": pct >= 50 ? "#d97706": "#16a34a";
+                    pct >= 90 ? "#dc2626" : pct >= 50 ? "#d97706" : "#16a34a";
                   const closed = s.status === "CLOSED";
+                  const statusTag = closed
+                    ? dict.citizenPortal.closed
+                    : pct >= 90
+                      ? dict.citizenPortal.almostFull
+                      : pct >= 50
+                        ? dict.citizenPortal.filling
+                        : dict.citizenPortal.openStatus;
                   return (
                     <li
                       key={s.id}
                       className={`rounded-xl border border-[var(--color-border)] bg-white p-4 shadow-sm transition-shadow hover:shadow-md ${
-                        closed ? "opacity-55": ""
+                        closed ? "opacity-55" : ""
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -298,27 +314,21 @@ export default function CitizenDashboard() {
                           className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                             closed
                               ? "bg-gray-100 text-gray-500"
-: pct >= 90
+                              : pct >= 90
                                 ? "bg-red-50 text-red-700"
-: pct >= 50
+                                : pct >= 50
                                   ? "bg-amber-50 text-amber-700"
-: "bg-green-50 text-green-700"
+                                  : "bg-green-50 text-green-700"
                           }`}
                         >
-                          {closed
-                            ? "Closed"
-: pct >= 90
-                              ? "Almost full"
-: pct >= 50
-                                ? "Filling"
-: "Open"}
+                          {statusTag}
                         </span>
                       </div>
                       <div className="mt-2.5 flex items-center gap-2.5">
                         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100">
                           <div
                             className="h-full rounded-full transition-all"
-                            style={{ width: `${closed ? 0: pct}%`, background: color }}
+                            style={{ width: `${closed ? 0 : pct}%`, background: color }}
                           />
                         </div>
                         <span className="text-[11px] font-medium tabular-nums text-muted">
@@ -330,7 +340,7 @@ export default function CitizenDashboard() {
                           href={`tel:${s.contact_phone}`}
                           className="mt-2 inline-block rounded-lg px-1 py-0.5 text-xs font-medium text-[var(--color-accent)] transition-colors hover:bg-blue-50"
                         >
-                          {s.contact_phone}
+                          📞 {s.contact_phone}
                         </a>
                       )}
                     </li>

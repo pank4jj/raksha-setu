@@ -3,15 +3,9 @@
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/Badge";
 import type { Incident } from "@/types/database";
+import { useTranslation } from "@/context/LanguageContext";
 
-const FILTERS = [
-  { value: "ACTIVE", label: "Active" },
-  { value: "CRITICAL", label: "Critical" },
-  { value: "UNASSIGNED", label: "Needs Action" },
-  { value: "RESOLVED", label: "Resolved" },
-] as const;
-
-export type IncidentFilter = (typeof FILTERS)[number]["value"];
+export type IncidentFilter = "ACTIVE" | "CRITICAL" | "UNASSIGNED" | "RESOLVED";
 
 export function IncidentListPanel({
   incidents,
@@ -32,6 +26,15 @@ export function IncidentListPanel({
   onSelect: (id: string) => void;
   clusterSizes?: Map<string, number>;
 }) {
+  const { dict } = useTranslation();
+
+  const filters = [
+    { value: "ACTIVE" as const, label: dict.incidents.activeFilter },
+    { value: "CRITICAL" as const, label: dict.incidents.criticalFilter },
+    { value: "UNASSIGNED" as const, label: dict.incidents.unassignedFilter },
+    { value: "RESOLVED" as const, label: dict.common.resolved },
+  ];
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     let list = incidents;
@@ -54,24 +57,32 @@ export function IncidentListPanel({
     });
   }, [incidents, filter, search]);
 
+  const getSeverityLabel = (sev: string) => {
+    return (dict.incidents.severities as Record<string, string>)[sev] ?? sev;
+  };
+
+  const getCategoryLabel = (cat: string) => {
+    return (dict.incidents.categories as Record<string, string>)[cat] ?? cat.replace(/_/g, " ");
+  };
+
   return (
     <div className="flex h-full flex-col">
       <div className="border-b border-[var(--color-border)] p-3">
         <input
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Search incidents..."
+          placeholder={dict.incidents.searchPlaceholder}
           className="mb-2 w-full rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm focus:outline-2 focus:outline-[var(--color-accent)]"
         />
         <div className="flex gap-1">
-          {FILTERS.map((f) => (
+          {filters.map((f) => (
             <button
               key={f.value}
               onClick={() => onFilterChange(f.value)}
               className={`rounded-md px-2.5 py-1 text-xs font-medium ${
                 filter === f.value
                   ? "bg-[var(--color-accent)] text-white"
-: "text-muted hover:bg-gray-100"
+                  : "text-muted hover:bg-gray-100"
               }`}
             >
               {f.label}
@@ -88,28 +99,28 @@ export function IncidentListPanel({
             className={`mb-2 w-full rounded-lg border bg-white p-3 text-left transition-colors ${
               selectedId === i.id
                 ? "border-[var(--color-accent)] ring-1 ring-[var(--color-accent)]"
-: "border-[var(--color-border)] hover:bg-gray-50"
+                : "border-[var(--color-border)] hover:bg-gray-50"
             }`}
           >
             <div className="flex items-center justify-between gap-2">
               <span className="font-mono text-xs text-muted">{i.incident_number}</span>
-              <Badge label={i.severity} color={i.severity} />
+              <Badge label={getSeverityLabel(i.severity)} color={i.severity} />
             </div>
             <p className="mt-1 line-clamp-2 text-sm">{i.description}</p>
             <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted">
-              <span>{i.type.replace(/_/g, " ")}</span>
+              <span>{getCategoryLabel(i.type)}</span>
               <span>·</span>
-              <span>{i.people_affected} ppl</span>
+              <span>{i.people_affected}</span>
               <span>·</span>
               <span
-                title="Report confidence"
-                className={i.confidence_score >= 0.8 ? "font-medium text-green-600": ""}
+                title={dict.incidents.aiConfidence}
+                className={i.confidence_score >= 0.8 ? "font-medium text-green-600" : ""}
               >
-                 {Math.round(i.confidence_score * 100)}%
+                {Math.round(i.confidence_score * 100)}%
               </span>
               {clusterSizes && clusterSizes.has(i.id) && (
                 <span className="rounded-full bg-blue-50 px-1.5 text-[10px] font-medium text-blue-700">
-                   {clusterSizes.get(i.id)! + 1} reports
+                  {clusterSizes.get(i.id)! + 1} {dict.incidents.corroborationReports}
                 </span>
               )}
               {i.location_text && (
@@ -122,7 +133,7 @@ export function IncidentListPanel({
           </button>
         ))}
         {!filtered.length && (
-          <p className="p-6 text-center text-sm text-muted">No incidents match</p>
+          <p className="p-6 text-center text-sm text-muted">{dict.incidents.noIncidentsFound}</p>
         )}
       </div>
     </div>

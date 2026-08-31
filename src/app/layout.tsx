@@ -1,11 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { LanguageProvider } from "@/context/LanguageContext";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "RakshaSetu — Disaster Response Coordination",
+  title: "Anvay — Disaster Response Coordination",
   description:
     "Real-time disaster early-warning and resource coordination platform",
   manifest: "/manifest.json",
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
     shortcut: "/logo.png",
     apple: "/logo.png",
   },
-  appleWebApp: { capable: true, statusBarStyle: "default", title: "RakshaSetu" },
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "Anvay" },
 };
 
 export const viewport: Viewport = {
@@ -31,7 +32,9 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} antialiased`}>{children}</body>
+      <body className={`${inter.variable} antialiased`}>
+        <LanguageProvider>{children}</LanguageProvider>
+      </body>
     </html>
   );
 }

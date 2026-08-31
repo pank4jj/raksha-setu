@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import type { ResourceTeam } from "@/types/database";
+import { useTranslation } from "@/context/LanguageContext";
 
 export function ResourcePanel({
   teams,
@@ -16,29 +17,33 @@ export function ResourcePanel({
   ) => Promise<{ reallocations: ReallocRec[] | null } | undefined>;
   reallocations: ReallocRec[] | null;
 }) {
+  const { dict } = useTranslation();
   const [busy, setBusy] = useState<string | null>(null);
 
   async function toggle(teamId: string, current: string) {
-    const next = current === "UNAVAILABLE" ? "AVAILABLE": "UNAVAILABLE";
+    const next = current === "UNAVAILABLE" ? "AVAILABLE" : "UNAVAILABLE";
     setBusy(teamId);
     await onStatusChange(teamId, next);
     setBusy(null);
   }
 
+  const getTeamStatusLabel = (st: string) => {
+    return (dict.resources.teamStatus as Record<string, string>)[st] ?? st;
+  };
+
   return (
     <div>
-      <h3 className="mb-2 px-1 text-sm font-semibold">Rescue Teams</h3>
+      <h3 className="mb-2 px-1 text-sm font-semibold">{dict.resources.title}</h3>
 
       {/* Live reassignment recommendations (judge demo moment) */}
       {reallocations && reallocations.length > 0 && (
         <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 p-3">
           <div className="text-xs font-bold uppercase tracking-wide text-amber-700">
-             Auto-reallocated
+            ⚡ {dict.resources.reallocationNotice}
           </div>
           {reallocations.map((r, i) => (
             <div key={i} className="mt-1 text-sm">
-              → New pick for orphaned incident:{" "}
-              <b>{teams.find((t) => t.id === r.recommended_resource_id)?.team_code}</b>{" "}
+              → {teams.find((t) => t.id === r.recommended_resource_id)?.team_code}{" "}
               (score {r.total_score}, ETA ~{r.eta_minutes} min)
             </div>
           ))}
@@ -53,10 +58,10 @@ export function ResourcePanel({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <b>{t.team_code}</b>
-              <Badge label={t.status} color={t.status} />
+              <Badge label={getTeamStatusLabel(t.status)} color={t.status} />
             </div>
             <div className="mt-0.5 truncate text-xs text-muted">
-              {t.name} · {t.capacity} capacity · {t.capabilities.join(", ") || "general"}
+              {t.name} · {t.capacity} {dict.resources.members} · {t.capabilities.join(", ") || "general"}
             </div>
           </div>
           <button
@@ -65,10 +70,10 @@ export function ResourcePanel({
             className={`ml-3 shrink-0 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
               t.status === "UNAVAILABLE"
                 ? "border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
-: "border-red-200 bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-40"
+                : "border-red-200 bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-40"
             }`}
           >
-            {t.status === "UNAVAILABLE" ? "Mark Available": "Mark Unavailable"}
+            {t.status === "UNAVAILABLE" ? dict.resources.teamStatus.AVAILABLE : dict.resources.offline}
           </button>
         </div>
       ))}

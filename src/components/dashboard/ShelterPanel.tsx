@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { createClient } from "@/lib/supabase/client";
 import type { Shelter } from "@/types/database";
+import { useTranslation } from "@/context/LanguageContext";
 
 export function ShelterPanel({
   shelters,
@@ -12,6 +13,7 @@ export function ShelterPanel({
   shelters: Shelter[];
   onUpdated: () => void;
 }) {
+  const { dict } = useTranslation();
   const [editing, setEditing] = useState<string | null>(null);
   const [value, setValue] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -27,9 +29,16 @@ export function ShelterPanel({
     onUpdated();
   }
 
+  const getShelterStatusLabel = (st: string) => {
+    if (st === "OPEN") return dict.shelters.open;
+    if (st === "FULL") return dict.shelters.full;
+    if (st === "CLOSED") return dict.shelters.closed;
+    return st;
+  };
+
   return (
     <div>
-      <h3 className="mb-2 px-1 text-sm font-semibold">Relief Shelters</h3>
+      <h3 className="mb-2 px-1 text-sm font-semibold">{dict.shelters.title}</h3>
 
       {shelters.map((s) => {
         const pct = Math.round((s.current_occupancy / s.total_capacity) * 100);
@@ -40,7 +49,7 @@ export function ShelterPanel({
           >
             <div className="flex items-center justify-between">
               <b className="truncate">{s.name}</b>
-              <Badge label={s.status} color={s.status} />
+              <Badge label={getShelterStatusLabel(s.status)} color={s.status} />
             </div>
 
             <div className="mt-2 flex items-center gap-2">
@@ -72,13 +81,13 @@ export function ShelterPanel({
                   onClick={() => save(s.id)}
                   className="rounded-md bg-[var(--color-accent)] px-3 text-xs font-medium text-white"
                 >
-                  Save
+                  {dict.common.save}
                 </button>
                 <button
                   onClick={() => setEditing(null)}
                   className="rounded-md px-2 text-xs text-muted hover:bg-gray-100"
                 >
-                  Cancel
+                  {dict.common.cancel}
                 </button>
               </div>
             ) : (
@@ -89,7 +98,7 @@ export function ShelterPanel({
                 }}
                 className="mt-2 text-xs font-medium text-[var(--color-accent)] hover:underline"
               >
-                Update occupancy
+                {dict.shelters.occupancy} {dict.common.status}
               </button>
             )}
           </div>
